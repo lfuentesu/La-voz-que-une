@@ -9,19 +9,22 @@ from datetime import datetime
 # ---------------------------------------------------------
 st.set_page_config(page_title="El Bosque 1", page_icon="🌳", layout="wide")
 
+# Clave de acceso para el equipo editorial (Ajustable)
+CLAVE_EDITORIAL = "bosque2026"
+
 # ---------------------------------------------------------
 # 2. DISEÑO COLORIDO Y ATRACTIVO (ESTILOS DIRECTOS)
 # ---------------------------------------------------------
 st.markdown('''
     <style>
-    /* 1. Color de fondo de TODA la página */
+    /* Color de fondo de toda la página */
     .stApp, [data-testid="stAppViewContainer"], .main {
-        background-color: #DDEEE0 !important; /* Verde menta/suave colorido */
+        background-color: #DDEEE0 !important;
     }
 
-    /* 2. Banner/Encabezado principal */
+    /* Banner/Encabezado principal */
     .main-header { 
-        background-color: #1E5631 !important; /* Verde bosque oscuro */
+        background-color: #1E5631 !important; 
         padding: 25px; 
         border-radius: 15px; 
         color: #FFFFFF !important; 
@@ -30,12 +33,12 @@ st.markdown('''
         box-shadow: 0 4px 10px rgba(0,0,0,0.15);
     }
 
-    /* 3. Tarjetas con bordes coloridos para las noticias y avisos */
+    /* Tarjetas con bordes coloridos */
     .card-noticia { 
         background-color: #FFFFFF !important; 
         padding: 20px; 
         border-radius: 12px; 
-        border-left: 8px solid #1E5631 !important; /* Borde verde */
+        border-left: 8px solid #1E5631 !important; 
         margin-bottom: 18px; 
         box-shadow: 0 3px 8px rgba(0,0,0,0.1);
         color: #1F2937 !important;
@@ -45,7 +48,7 @@ st.markdown('''
         background-color: #FFFFFF !important; 
         padding: 20px; 
         border-radius: 12px; 
-        border-left: 8px solid #D97706 !important; /* Borde Naranja/Dorado para clasificados */
+        border-left: 8px solid #D97706 !important; 
         margin-bottom: 18px; 
         box-shadow: 0 3px 8px rgba(0,0,0,0.1);
         color: #1F2937 !important;
@@ -55,31 +58,30 @@ st.markdown('''
         background-color: #FFFFFF !important; 
         padding: 20px; 
         border-radius: 12px; 
-        border-left: 8px solid #2563EB !important; /* Borde Azul para la Chispa del Barrio */
+        border-left: 8px solid #2563EB !important; 
         margin-bottom: 18px; 
         box-shadow: 0 3px 8px rgba(0,0,0,0.1);
         color: #1F2937 !important;
     }
 
-    /* 4. Botones muy visibles y coloridos */
+    /* Botones principales */
     div[data-testid="stFormSubmitButton"] > button, .stButton > button {
-        background-color: #2E7D32 !important; /* Verde vivo */
+        background-color: #2E7D32 !important; 
         color: #FFFFFF !important;
         border-radius: 10px !important;
         border: none !important;
-        padding: 14px 30px !important;
+        padding: 12px 24px !important;
         font-weight: bold !important;
-        font-size: 18px !important;
+        font-size: 16px !important;
         box-shadow: 0 4px 8px rgba(0,0,0,0.2) !important;
-        width: 100% !important;
     }
 
     div[data-testid="stFormSubmitButton"] > button:hover, .stButton > button:hover {
-        background-color: #1B5E20 !important; /* Verde intenso al pasar el cursor */
+        background-color: #1B5E20 !important; 
         cursor: pointer !important;
     }
 
-    /* 5. Menú de Pestañas (Tabs) */
+    /* Pestañas (Tabs) */
     div[data-baseweb="tab-list"] {
         background-color: #C2E0C6 !important;
         padding: 8px;
@@ -140,8 +142,15 @@ def cargar_datos():
         pendientes = pd.read_excel(xls, sheet_name="Pendientes")
         return clasificados, humor, noticias, pendientes
     except PermissionError:
-        st.error("⚠️ El archivo Excel está abierto. Por favor ciérrelo.")
+        st.error("⚠️ El archivo Excel está en uso. Si lo tiene abierto, ciérrelo.")
         st.stop()
+
+def guardar_todo(clasificados, humor, noticias, pendientes):
+    with pd.ExcelWriter(EXCEL_FILE, engine="openpyxl") as writer:
+        clasificados.to_excel(writer, sheet_name="Clasificados", index=False)
+        humor.to_excel(writer, sheet_name="Humor", index=False)
+        noticias.to_excel(writer, sheet_name="Noticias", index=False)
+        pendientes.to_excel(writer, sheet_name="Pendientes", index=False)
 
 def guardar_pendiente(nombre, seccion, mensaje):
     try:
@@ -156,23 +165,16 @@ def guardar_pendiente(nombre, seccion, mensaje):
         }])
         
         pendientes_actualizado = pd.concat([pendientes, nuevo_registro], ignore_index=True)
-        
-        with pd.ExcelWriter(EXCEL_FILE, engine="openpyxl") as writer:
-            clasificados.to_excel(writer, sheet_name="Clasificados", index=False)
-            humor.to_excel(writer, sheet_name="Humor", index=False)
-            noticias.to_excel(writer, sheet_name="Noticias", index=False)
-            pendientes_actualizado.to_excel(writer, sheet_name="Pendientes", index=False)
-            
+        guardar_todo(clasificados, humor, noticias, pendientes_actualizado)
         return True
-    except PermissionError:
-        st.error("⚠️ Cierre el archivo Excel e intente de nuevo.")
+    except Exception:
         return False
 
-# Cargar datos
-df_clasificados, df_humor, df_noticias, _ = cargar_datos()
+# Cargar datos desde Excel
+df_clasificados, df_humor, df_noticias, df_pendientes = cargar_datos()
 
 # ---------------------------------------------------------
-# 4. INTERFAZ GRÁFICA Y CONTENIDOS
+# 4. ENCABEZADO Y PESTAÑAS
 # ---------------------------------------------------------
 st.markdown('''
     <div class="main-header">
@@ -181,15 +183,17 @@ st.markdown('''
     </div>
 ''', unsafe_allow_html=True)
 
-tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
     "🏠 Inicio", 
     "📜 Historia y Memoria", 
     "🛠️ Avisos y Clasificados", 
     "📢 La Voz del Barrio", 
     "🎭 La Chispa del Barrio",
-    "✍️ Participa"
+    "✍️ Participa",
+    "🔒 Administración"
 ])
 
+# --- TAB 1: INICIO ---
 with tab1:
     st.header("Bienvenido al Periódico Digital de la Población El Bosque 1")
     st.success("📌 Próxima Reunión: Martes en la sede comunitaria.")
@@ -201,6 +205,7 @@ with tab1:
             </div>
         ''', unsafe_allow_html=True)
 
+# --- TAB 2: HISTORIA ---
 with tab2:
     st.header("50+ Años de Memoria Viva")
     st.markdown('''
@@ -209,6 +214,7 @@ with tab2:
         </div>
     ''', unsafe_allow_html=True)
 
+# --- TAB 3: CLASIFICADOS ---
 with tab3:
     st.header("Pizarra Comunitaria de Clasificados")
     aprobados = df_clasificados[df_clasificados["Estado"] == "Aprobado"]
@@ -223,10 +229,12 @@ with tab3:
                 </div>
             ''', unsafe_allow_html=True)
 
+# --- TAB 4: LA VOZ DEL BARRIO ---
 with tab4:
     st.header("Columnas de Opinión y Petitorios")
     st.warning("📣 Mejora de Luminarias: Catastro en pasajes interiores.")
 
+# --- TAB 5: LA CHISPA DEL BARRIO ---
 with tab5:
     st.header("🎭 La Chispa del Barrio")
     st.write("Un espacio para la alegría, el buen humor y las sonrisas compartidas entre vecinos.")
@@ -239,6 +247,7 @@ with tab5:
             </div>
         ''', unsafe_allow_html=True)
 
+# --- TAB 6: PARTICIPA ---
 with tab6:
     st.header("Envía tu Noticia, Aviso o Historia")
     with st.form("form_publicacion", clear_on_submit=True):
@@ -252,5 +261,75 @@ with tab6:
                 exito = guardar_pendiente(nombre, seccion, mensaje)
                 if exito:
                     st.success("¡Muchas gracias! Tu mensaje ha sido registrado correctamente y se guardó en la bandeja del equipo editorial.")
+                    st.rerun()
             else:
                 st.error("Por favor completa tu nombre y el mensaje antes de enviar.")
+
+# --- TAB 7: PANEL DE ADMINISTRACIÓN EDITORIAL ---
+with tab7:
+    st.header("🔒 Panel de Control Editorial")
+    st.write("Espacio exclusivo para el equipo de trabajo del periódico.")
+    
+    password = st.text_input("Ingrese la clave secreta de administración:", type="password")
+    
+    if password == CLAVE_EDITORIAL:
+        st.success("✅ Acceso autorizado como Equipo Editorial.")
+        st.markdown("---")
+        
+        pendientes_activos = df_pendientes[df_pendientes["Estado"] == "Pendiente"]
+        
+        if pendientes_activos.empty:
+            st.info("🎉 ¡No hay mensajes pendientes por revisar en este momento!")
+        else:
+            st.subheader(f"📩 Mensajes por revisar ({len(pendientes_activos)})")
+            
+            for index, row in pendientes_activos.iterrows():
+                with st.expander(f"📌 {row['Sección']} - De: {row['Nombre']} ({row['Fecha']})", expanded=True):
+                    st.write(f"**Mensaje:** {row['Mensaje']}")
+                    
+                    col_aprobar, col_rechazar = st.columns(2)
+                    
+                    with col_aprobar:
+                        if st.button("✅ Aprobar y Publicar", key=f"ap_btn_{index}"):
+                            # Marcar como Aprobado en Pendientes
+                            df_pendientes.at[index, "Estado"] = "Aprobado"
+                            
+                            # Trasladar a la pestaña correspondiente
+                            if row['Sección'] == "Aviso Clasificado":
+                                nuevo_clasificado = pd.DataFrame([{
+                                    "Oficio/Producto": f"Aviso de {row['Nombre']}",
+                                    "Detalle": row['Mensaje'],
+                                    "Contacto": row['Nombre'],
+                                    "Estado": "Aprobado"
+                                }])
+                                df_clasificados = pd.concat([df_clasificados, nuevo_clasificado], ignore_index=True)
+                                
+                            elif row['Sección'] == "La Chispa del Barrio":
+                                nuevo_humor = pd.DataFrame([{
+                                    "Tipo": f"Aporte de {row['Nombre']}",
+                                    "Contenido": row['Mensaje'],
+                                    "Estado": "Aprobado"
+                                }])
+                                df_humor = pd.concat([df_humor, nuevo_humor], ignore_index=True)
+                                
+                            else: # Historia / Noticia
+                                nueva_noticia = pd.DataFrame([{
+                                    "Sección": "Noticias",
+                                    "Título": f"Aporte de {row['Nombre']}",
+                                    "Contenido": row['Mensaje'],
+                                    "Estado": "Aprobado"
+                                }])
+                                df_noticias = pd.concat([df_noticias, nueva_noticia], ignore_index=True)
+                            
+                            guardar_todo(df_clasificados, df_humor, df_noticias, df_pendientes)
+                            st.toast("¡Publicación aprobada y agregada a la web pública!")
+                            st.rerun()
+                            
+                    with col_rechazar:
+                        if st.button("🗑️ Descartar / Eliminar", key=f"del_btn_{index}"):
+                            df_pendientes.at[index, "Estado"] = "Rechazado"
+                            guardar_todo(df_clasificados, df_humor, df_noticias, df_pendientes)
+                            st.toast("Mensaje descartado.")
+                            st.rerun()
+    elif password != "":
+        st.error("🔑 Clave incorrecta. Intente de nuevo.")
