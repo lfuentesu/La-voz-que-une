@@ -1,335 +1,247 @@
-# -*- coding: utf-8 -*-
 import streamlit as st
 import pandas as pd
 import os
-from datetime import datetime
 
 # ---------------------------------------------------------
-# 1. CONFIGURACIÓN DE PÁGINA
+# CONFIGURACIÓN DE LA PÁGINA
 # ---------------------------------------------------------
-st.set_page_config(page_title="El Bosque 1", page_icon="🌳", layout="wide")
+st.set_page_config(
+    page_title="Periódico Digital El Bosque 1",
+    page_icon="🌳",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 
 # Clave de acceso para el equipo editorial (Ajustable)
 CLAVE_EDITORIAL = "bosque2026"
+ARCHIVO_DATOS = "datos_periodico.xlsx"
 
 # ---------------------------------------------------------
-# 2. DISEÑO COLORIDO Y ATRACTIVO (ESTILOS DIRECTOS)
+# CARGA Y GUARDADO DE DATOS
 # ---------------------------------------------------------
-st.markdown('''
+def cargar_datos():
+    if os.path.exists(ARCHIVO_DATOS):
+        df = pd.read_excel(ARCHIVO_DATOS)
+        # Normalizar nombres de columnas por seguridad
+        df.columns = [str(c).strip().lower() for c in df.columns]
+        return df
+    else:
+        # Estructura base en caso de que no exista el archivo
+        return pd.DataFrame(columns=[
+            "id", "fecha", "titulo", "categoria", "contenido", 
+            "autor", "imagen", "estado"
+        ])
+
+def guardar_datos(df):
+    df.to_excel(ARCHIVO_DATOS, index=False)
+
+df_datos = cargar_datos()
+
+# Asegurar que existan las columnas necesarias
+columnas_requeridas = ["id", "fecha", "titulo", "categoria", "contenido", "autor", "imagen", "estado"]
+for col in columnas_requeridas:
+    if col not in df_datos.columns:
+        df_datos[col] = ""
+
+# ---------------------------------------------------------
+# ESTILOS VISUALES Y CABECERA COLORIDA
+# ---------------------------------------------------------
+st.markdown("""
     <style>
-    /* Color de fondo de toda la página */
-    .stApp, [data-testid="stAppViewContainer"], .main {
-        background-color: #DDEEE0 !important;
+    .main-title {
+        color: #1E5631;
+        text-align: center;
+        font-size: 2.5rem;
+        font-weight: bold;
+        margin-bottom: 0px;
     }
-
-    /* Banner/Encabezado principal */
-    .main-header { 
-        background-color: #1E5631 !important; 
-        padding: 25px; 
-        border-radius: 15px; 
-        color: #FFFFFF !important; 
-        text-align: center; 
-        margin-bottom: 25px;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+    .sub-title {
+        color: #333333;
+        text-align: center;
+        font-size: 1.1rem;
+        margin-bottom: 20px;
     }
-
-    /* Tarjetas con bordes coloridos */
-    .card-noticia { 
-        background-color: #FFFFFF !important; 
-        padding: 20px; 
-        border-radius: 12px; 
-        border-left: 8px solid #1E5631 !important; 
-        margin-bottom: 18px; 
-        box-shadow: 0 3px 8px rgba(0,0,0,0.1);
-        color: #1F2937 !important;
-    }
-
-    .card-aviso { 
-        background-color: #FFFFFF !important; 
-        padding: 20px; 
-        border-radius: 12px; 
-        border-left: 8px solid #D97706 !important; 
-        margin-bottom: 18px; 
-        box-shadow: 0 3px 8px rgba(0,0,0,0.1);
-        color: #1F2937 !important;
-    }
-
-    .card-humor { 
-        background-color: #FFFFFF !important; 
-        padding: 20px; 
-        border-radius: 12px; 
-        border-left: 8px solid #2563EB !important; 
-        margin-bottom: 18px; 
-        box-shadow: 0 3px 8px rgba(0,0,0,0.1);
-        color: #1F2937 !important;
-    }
-
-    /* Botones principales */
-    div[data-testid="stFormSubmitButton"] > button, .stButton > button {
-        background-color: #2E7D32 !important; 
-        color: #FFFFFF !important;
-        border-radius: 10px !important;
-        border: none !important;
-        padding: 12px 24px !important;
-        font-weight: bold !important;
-        font-size: 16px !important;
-        box-shadow: 0 4px 8px rgba(0,0,0,0.2) !important;
-    }
-
-    div[data-testid="stFormSubmitButton"] > button:hover, .stButton > button:hover {
-        background-color: #1B5E20 !important; 
-        cursor: pointer !important;
-    }
-
-    /* Pestañas (Tabs) */
-    div[data-baseweb="tab-list"] {
-        background-color: #C2E0C6 !important;
-        padding: 8px;
+    .card-noticia {
+        background-color: #F4F9F4;
+        padding: 18px;
         border-radius: 10px;
-    }
-
-    button[data-baseweb="tab"] {
-        font-size: 16px !important;
-        font-weight: bold !important;
-        color: #1E5631 !important;
-    }
-
-    button[aria-selected="true"] {
-        background-color: #FFFFFF !important;
-        border-radius: 8px !important;
-        color: #1E5631 !important;
+        border-left: 5px solid #1E5631;
+        margin-bottom: 15px;
     }
     </style>
-''', unsafe_allow_html=True)
+""", unsafe_allow_html=True)
+
+st.markdown('<div class="main-title">🌳 Periódico Digital El Bosque 1</div>', unsafe_allow_html=True)
+st.markdown('<div class="sub-title">La Voz que Une a Nuestra Comunidad • La Pincoya, Huechuraba</div>', unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# 3. GESTIÓN DE BASE DE DATOS (EXCEL)
+# MENÚ DE NAVEGACIÓN
 # ---------------------------------------------------------
-EXCEL_FILE = "datos_periodico.xlsx"
-
-def crear_excel_inicial():
-    data_clasificados = pd.DataFrame([
-        {"Oficio/Producto": "Gasfitería Don Roberto", "Detalle": "Reparación de cañerías y arreglos generales", "Contacto": "+56 9 8765 4321", "Estado": "Aprobado"},
-        {"Oficio/Producto": "Amasandería La Esquina", "Detalle": "Pan amasado y empanadas el fin de semana", "Contacto": "+56 9 1234 5678", "Estado": "Aprobado"}
-    ])
-    data_humor = pd.DataFrame([
-        {"Tipo": "Chiste del Día", "Contenido": "— Vecino, ¿sabe si en este pasaje hay buena señal?\n— ¡Súper buena! Cada vez que sale a barrer la vecina del frente, nos enteramos de todas las noticias.", "Estado": "Aprobado"}
-    ])
-    data_noticias = pd.DataFrame([
-        {"Sección": "Inicio", "Título": "Jornada de Presentación del Portal Web", "Contenido": "Presentación oficial del periódico digital para los pobladores y junta de vecinos.", "Estado": "Aprobado"}
-    ])
-    data_pendientes = pd.DataFrame(columns=["Fecha", "Nombre", "Sección", "Mensaje", "Estado"])
-    
-    with pd.ExcelWriter(EXCEL_FILE, engine="openpyxl") as writer:
-        data_clasificados.to_excel(writer, sheet_name="Clasificados", index=False)
-        data_humor.to_excel(writer, sheet_name="Humor", index=False)
-        data_noticias.to_excel(writer, sheet_name="Noticias", index=False)
-        data_pendientes.to_excel(writer, sheet_name="Pendientes", index=False)
-
-def cargar_datos():
-    if not os.path.exists(EXCEL_FILE):
-        crear_excel_inicial()
-    
-    try:
-        xls = pd.ExcelFile(EXCEL_FILE)
-        if "Pendientes" not in xls.sheet_names:
-            crear_excel_inicial()
-            xls = pd.ExcelFile(EXCEL_FILE)
-
-        clasificados = pd.read_excel(xls, sheet_name="Clasificados")
-        humor = pd.read_excel(xls, sheet_name="Humor")
-        noticias = pd.read_excel(xls, sheet_name="Noticias")
-        pendientes = pd.read_excel(xls, sheet_name="Pendientes")
-        return clasificados, humor, noticias, pendientes
-    except PermissionError:
-        st.error("⚠️ El archivo Excel está en uso. Si lo tiene abierto, ciérrelo.")
-        st.stop()
-
-def guardar_todo(clasificados, humor, noticias, pendientes):
-    with pd.ExcelWriter(EXCEL_FILE, engine="openpyxl") as writer:
-        clasificados.to_excel(writer, sheet_name="Clasificados", index=False)
-        humor.to_excel(writer, sheet_name="Humor", index=False)
-        noticias.to_excel(writer, sheet_name="Noticias", index=False)
-        pendientes.to_excel(writer, sheet_name="Pendientes", index=False)
-
-def guardar_pendiente(nombre, seccion, mensaje):
-    try:
-        clasificados, humor, noticias, pendientes = cargar_datos()
-        
-        nuevo_registro = pd.DataFrame([{
-            "Fecha": datetime.now().strftime("%Y-%m-%d %H:%M"),
-            "Nombre": nombre,
-            "Sección": seccion,
-            "Mensaje": mensaje,
-            "Estado": "Pendiente"
-        }])
-        
-        pendientes_actualizado = pd.concat([pendientes, nuevo_registro], ignore_index=True)
-        guardar_todo(clasificados, humor, noticias, pendientes_actualizado)
-        return True
-    except Exception:
-        return False
-
-# Cargar datos desde Excel
-df_clasificados, df_humor, df_noticias, df_pendientes = cargar_datos()
-
-# ---------------------------------------------------------
-# 4. ENCABEZADO Y PESTAÑAS
-# ---------------------------------------------------------
-st.markdown('''
-    <div class="main-header">
-        <h1>🌳 EL BOSQUE 1: Periódico Digital</h1>
-        <p>Voz Comunitaria • 50+ Años de Historia • La Pincoya</p>
-    </div>
-''', unsafe_allow_html=True)
-
-tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
+opciones_menu = [
     "🏠 Inicio", 
-    "📜 Historia y Memoria", 
-    "🛠️ Avisos y Clasificados", 
-    "📢 La Voz del Barrio", 
-    "🎭 La Chispa del Barrio",
-    "✍️ Participa",
+    "📜 Memoria e Historia", 
+    "📸 Galería", 
+    "📢 Avisos Comunitarios", 
+    "✍️ Participa", 
     "🔒 Administración"
-])
+]
 
-# --- TAB 1: INICIO ---
-with tab1:
-    st.header("Bienvenido al Periódico Digital de la Población El Bosque 1")
-    st.success("📌 Próxima Reunión: Martes en la sede comunitaria.")
-    for _, row in df_noticias[df_noticias["Estado"] == "Aprobado"].iterrows():
-        st.markdown(f'''
-            <div class="card-noticia">
-                <h3>{row['Título']}</h3>
-                <p>{row['Contenido']}</p>
-            </div>
-        ''', unsafe_allow_html=True)
+pestaña = st.sidebar.radio("Navegación", opciones_menu)
 
-# --- TAB 2: HISTORIA ---
-with tab2:
-    st.header("50+ Años de Memoria Viva")
-    st.markdown('''
-        <div class="card-noticia">
-            <p>A comienzos de los años 70, las primeras familias llegaron a estos terrenos guiadas por el sueño de una vivienda digna y una comunidad unida.</p>
-        </div>
-    ''', unsafe_allow_html=True)
+# Filtrar solo publicaciones aprobadas para el público
+df_aprobados = df_datos[df_datos['estado'].astype(str).str.lower() == 'aprobado'].copy()
 
-# --- TAB 3: CLASIFICADOS ---
-with tab3:
-    st.header("Pizarra Comunitaria de Clasificados")
-    aprobados = df_clasificados[df_clasificados["Estado"] == "Aprobado"]
-    cols = st.columns(3)
-    for idx, (_, row) in enumerate(aprobados.iterrows()):
-        with cols[idx % 3]:
-            st.markdown(f'''
-                <div class="card-aviso">
-                    <h4>🛠️ {row['Oficio/Producto']}</h4>
-                    <p>{row['Detalle']}</p>
-                    <p><b>Contacto:</b> {row['Contacto']}</p>
+# ---------------------------------------------------------
+# 1. PESTAÑA: INICIO
+# ---------------------------------------------------------
+if pestaña == "🏠 Inicio":
+    st.header("🏠 Noticias y Publicaciones Recientes")
+    
+    if df_aprobados.empty:
+        st.info("Aún no hay publicaciones en la portada. ¡Sé el primero en enviar tu historia en la sección Participa!")
+    else:
+        for _, row in df_aprobados.iterrows():
+            with st.container():
+                st.markdown(f"""
+                <div class="card-noticia">
+                    <span style="color:#888; font-size:0.85rem;">{row.get('fecha', '')} | Categoría: <b>{row.get('categoria', 'General')}</b></span>
+                    <h3 style="margin-top:5px; color:#1E5631;">{row.get('titulo', '')}</h3>
+                    <p>{row.get('contenido', '')}</p>
+                    <small><b>Por:</b> {row.get('autor', 'Vecino de El Bosque 1')}</small>
                 </div>
-            ''', unsafe_allow_html=True)
+                """, unsafe_allow_html=True)
+                
+                if pd.notna(row.get('imagen')) and str(row.get('imagen')).strip() != "":
+                    st.image(row['imagen'], use_column_width=True)
+                st.divider()
 
-# --- TAB 4: LA VOZ DEL BARRIO ---
-with tab4:
-    st.header("Columnas de Opinión y Petitorios")
-    st.warning("📣 Mejora de Luminarias: Catastro en pasajes interiores.")
+# ---------------------------------------------------------
+# 2. PESTAÑA: MEMORIA E HISTORIA
+# ---------------------------------------------------------
+elif pestaña == "📜 Memoria e Historia":
+    st.header("📜 Memoria e Historia de Nuestro Barrio")
+    st.write("Relatos, fotografías y recuerdos del camino recorrido por los pobladores de El Bosque 1 y La Pincoya.")
+    
+    # Filtro exacto para la categoría Memoria e Historia
+    df_historia = df_aprobados[df_aprobados['categoria'].astype(str).str.strip().str.lower() == 'memoria e historia']
+    
+    if df_historia.empty:
+        st.info("No hay relatos históricos publicados todavía. Puedes enviar tus memorias en la pestaña 'Participa'.")
+    else:
+        for _, row in df_historia.iterrows():
+            st.markdown(f"### {row.get('titulo', '')}")
+            st.caption(f"Publicado el {row.get('fecha', '')} | Relatado por: {row.get('autor', 'Anónimo')}")
+            st.write(row.get('contenido', ''))
+            if pd.notna(row.get('imagen')) and str(row.get('imagen')).strip() != "":
+                st.image(row['imagen'], use_column_width=True)
+            st.divider()
 
-# --- TAB 5: LA CHISPA DEL BARRIO ---
-with tab5:
-    st.header("🎭 La Chispa del Barrio")
-    st.write("Un espacio para la alegría, el buen humor y las sonrisas compartidas entre vecinos.")
-    humor_aprobado = df_humor[df_humor["Estado"] == "Aprobado"]
-    for _, row in humor_aprobado.iterrows():
-        st.markdown(f'''
-            <div class="card-humor">
-                <h4>😄 {row['Tipo']}</h4>
-                <p>{row['Contenido']}</p>
-            </div>
-        ''', unsafe_allow_html=True)
+# ---------------------------------------------------------
+# 3. PESTAÑA: GALERÍA DE FOTOS (NUEVA)
+# ---------------------------------------------------------
+elif pestaña == "📸 Galería":
+    st.header("📸 Galería Fotográfica")
+    st.write("Retratos de nuestros eventos, reuniones, vecinos e historia visual comunitaria.")
+    
+    # Buscar registros que tengan imagen y estén aprobados
+    df_galeria = df_aprobados[df_aprobados['imagen'].notna() & (df_aprobados['imagen'].astype(str).str.strip() != "")]
+    
+    if df_galeria.empty:
+        st.info("Aún no se han publicado imágenes en la galería. ¡Envía tus fotografías desde la pestaña 'Participa'!")
+    else:
+        cols = st.columns(3)  # Organizar en 3 columnas
+        for idx, (_, row) in enumerate(df_galeria.iterrows()):
+            with cols[idx % 3]:
+                st.image(row['imagen'], use_column_width=True)
+                st.caption(f"**{row.get('titulo', '')}**\n_{row.get('fecha', '')}_")
 
-# --- TAB 6: PARTICIPA ---
-with tab6:
-    st.header("Envía tu Noticia, Aviso o Historia")
-    with st.form("form_publicacion", clear_on_submit=True):
-        nombre = st.text_input("Tu Nombre o Seudónimo:")
-        seccion = st.selectbox("Sección a la que envías:", ["Aviso Clasificado", "La Chispa del Barrio", "Historia / Noticia"])
-        mensaje = st.text_area("Escribe tu contenido aquí:")
-        enviado = st.form_submit_button("🚀 Enviar Publicación al Periódico")
+# ---------------------------------------------------------
+# 4. PESTAÑA: AVISOS COMUNITARIOS
+# ---------------------------------------------------------
+elif pestaña == "📢 Avisos Comunitarios":
+    st.header("📢 Avisos y Datos del Barrio")
+    
+    df_avisos = df_aprobados[df_aprobados['categoria'].astype(str).str.strip().str.lower() == 'avisos comunitarios']
+    
+    if df_avisos.empty:
+        st.info("No hay avisos vigentes en este momento.")
+    else:
+        for _, row in df_avisos.iterrows():
+            st.warning(f"**{row.get('titulo', '')}**\n\n{row.get('contenido', '')}\n\n_Contacto / Autor: {row.get('autor', '')}_")
+
+# ---------------------------------------------------------
+# 5. PESTAÑA: PARTICIPA (FORMULARIO PÚBLICO)
+# ---------------------------------------------------------
+elif pestaña == "✍️ Participa":
+    st.header("✍️ Envía tu Noticia, Relato o Aviso")
+    st.write("Escribe tu aporte. El equipo editorial lo revisará antes de ser publicado en la portada.")
+    
+    with st.form("form_participa", clear_on_submit=True):
+        nombre = st.text_input("Tu Nombre o Apodo:")
+        categoria = st.selectbox("Selecciona la Sección:", [
+            "Inicio", 
+            "Memoria e Historia", 
+            "Galería", 
+            "Avisos Comunitarios"
+        ])
+        titulo = st.text_input("Título de la Publicación:")
+        contenido = st.text_area("Escribe tu texto aquí:")
+        enlace_imagen = st.text_input("Enlace de imagen (Opcional - URL pública):")
+        
+        enviado = st.form_submit_button("📤 Enviar para Revisión")
         
         if enviado:
-            if nombre.strip() != "" and mensaje.strip() != "":
-                exito = guardar_pendiente(nombre, seccion, mensaje)
-                if exito:
-                    st.success("¡Muchas gracias! Tu mensaje ha sido registrado correctamente y se guardó en la bandeja del equipo editorial.")
-                    st.rerun()
+            if titulo.strip() == "" or contenido.strip() == "":
+                st.error("Por favor completa al menos el título y el contenido.")
             else:
-                st.error("Por favor completa tu nombre y el mensaje antes de enviar.")
+                nueva_fila = {
+                    "id": len(df_datos) + 1,
+                    "fecha": pd.Timestamp.now().strftime("%Y-%m-%d"),
+                    "titulo": titulo,
+                    "categoria": categoria,
+                    "contenido": contenido,
+                    "autor": nombre if nombre.strip() != "" else "Vecino",
+                    "imagen": enlace_imagen,
+                    "estado": "Pendiente"
+                }
+                df_datos = pd.concat([df_datos, pd.DataFrame([nueva_fila])], ignore_index=True)
+                guardar_datos(df_datos)
+                st.success("¡Muchas gracias! Tu publicación ha sido enviada al equipo editorial para su aprobación.")
 
-# --- TAB 7: PANEL DE ADMINISTRACIÓN EDITORIAL ---
-with tab7:
-    st.header("🔒 Panel de Control Editorial")
-    st.write("Espacio exclusivo para el equipo de trabajo del periódico.")
+# ---------------------------------------------------------
+# 6. PESTAÑA: ADMINISTRACIÓN (PANEL EDITORIAL)
+# ---------------------------------------------------------
+elif pestaña == "🔒 Administración":
+    st.header("🔒 Panel de Administración Editorial")
     
-    password = st.text_input("Ingrese la clave secreta de administración:", type="password")
+    clave_ingresada = st.text_input("Ingresa la clave secreta:", type="password")
     
-    if password == CLAVE_EDITORIAL:
-        st.success("✅ Acceso autorizado como Equipo Editorial.")
-        st.markdown("---")
+    if clave_ingresada == CLAVE_EDITORIAL:
+        st.success("Acceso concedido al Equipo Editorial.")
         
-        pendientes_activos = df_pendientes[df_pendientes["Estado"] == "Pendiente"]
+        df_pendientes = df_datos[df_datos['estado'].astype(str).str.lower() == 'pendiente']
         
-        if pendientes_activos.empty:
-            st.info("🎉 ¡No hay mensajes pendientes por revisar en este momento!")
+        st.subheader("📌 Publicaciones Pendientes de Revisión")
+        if df_pendientes.empty:
+            st.info("No hay publicaciones pendientes por revisar.")
         else:
-            st.subheader(f"📩 Mensajes por revisar ({len(pendientes_activos)})")
-            
-            for index, row in pendientes_activos.iterrows():
-                with st.expander(f"📌 {row['Sección']} - De: {row['Nombre']} ({row['Fecha']})", expanded=True):
-                    st.write(f"**Mensaje:** {row['Mensaje']}")
+            for idx, row in df_pendientes.iterrows():
+                with st.expander(f"Revisar: {row.get('titulo', 'Sin título')} (Por: {row.get('autor', 'Anónimo')})"):
+                    st.write(f"**Categoría:** {row.get('categoria', '')}")
+                    st.write(f"**Contenido:** {row.get('contenido', '')}")
+                    if pd.notna(row.get('imagen')) and str(row.get('imagen')).strip() != "":
+                        st.image(row['imagen'], width=300)
                     
-                    col_aprobar, col_rechazar = st.columns(2)
-                    
-                    with col_aprobar:
-                        if st.button("✅ Aprobar y Publicar", key=f"ap_btn_{index}"):
-                            # Marcar como Aprobado en Pendientes
-                            df_pendientes.at[index, "Estado"] = "Aprobado"
-                            
-                            # Trasladar a la pestaña correspondiente
-                            if row['Sección'] == "Aviso Clasificado":
-                                nuevo_clasificado = pd.DataFrame([{
-                                    "Oficio/Producto": f"Aviso de {row['Nombre']}",
-                                    "Detalle": row['Mensaje'],
-                                    "Contacto": row['Nombre'],
-                                    "Estado": "Aprobado"
-                                }])
-                                df_clasificados = pd.concat([df_clasificados, nuevo_clasificado], ignore_index=True)
-                                
-                            elif row['Sección'] == "La Chispa del Barrio":
-                                nuevo_humor = pd.DataFrame([{
-                                    "Tipo": f"Aporte de {row['Nombre']}",
-                                    "Contenido": row['Mensaje'],
-                                    "Estado": "Aprobado"
-                                }])
-                                df_humor = pd.concat([df_humor, nuevo_humor], ignore_index=True)
-                                
-                            else: # Historia / Noticia
-                                nueva_noticia = pd.DataFrame([{
-                                    "Sección": "Noticias",
-                                    "Título": f"Aporte de {row['Nombre']}",
-                                    "Contenido": row['Mensaje'],
-                                    "Estado": "Aprobado"
-                                }])
-                                df_noticias = pd.concat([df_noticias, nueva_noticia], ignore_index=True)
-                            
-                            guardar_todo(df_clasificados, df_humor, df_noticias, df_pendientes)
-                            st.toast("¡Publicación aprobada y agregada a la web pública!")
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        if st.button(f"✅ Aprobar y Publicar #{row['id']}", key=f"ap_{row['id']}"):
+                            df_datos.loc[df_datos['id'] == row['id'], 'estado'] = 'Aprobado'
+                            guardar_datos(df_datos)
                             st.rerun()
-                            
-                    with col_rechazar:
-                        if st.button("🗑️ Descartar / Eliminar", key=f"del_btn_{index}"):
-                            df_pendientes.at[index, "Estado"] = "Rechazado"
-                            guardar_todo(df_clasificados, df_humor, df_noticias, df_pendientes)
-                            st.toast("Mensaje descartado.")
+                    with col2:
+                        if st.button(f"🗑️ Descartar #{row['id']}", key=f"desc_{row['id']}"):
+                            df_datos = df_datos[df_datos['id'] != row['id']]
+                            guardar_datos(df_datos)
                             st.rerun()
-    elif password != "":
-        st.error("🔑 Clave incorrecta. Intente de nuevo.")
+    elif clave_ingresada != "":
+        st.error("Clave incorrecta. Consulta con el equipo editorial.")
