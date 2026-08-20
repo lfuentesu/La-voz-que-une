@@ -26,7 +26,7 @@ def cargar_datos():
     else:
         return pd.DataFrame(columns=[
             "id", "fecha", "titulo", "categoria", "contenido", 
-            "autor", "imagen", "estado"
+            "autor", "correo", "telefono", "imagen", "estado"
         ])
 
 def guardar_datos(df):
@@ -34,8 +34,11 @@ def guardar_datos(df):
 
 df_datos = cargar_datos()
 
-# Asegurar columnas requeridas
-columnas_requeridas = ["id", "fecha", "titulo", "categoria", "contenido", "autor", "imagen", "estado"]
+# Asegurar columnas requeridas (incluyendo correo y telefono)
+columnas_requeridas = [
+    "id", "fecha", "titulo", "categoria", "contenido", 
+    "autor", "correo", "telefono", "imagen", "estado"
+]
 for col in columnas_requeridas:
     if col not in df_datos.columns:
         df_datos[col] = ""
@@ -104,7 +107,6 @@ df_aprobados = df_datos[df_datos['estado'].apply(es_aprobado)].copy()
 if pestaña == "🏠 Inicio":
     st.header("🏠 Noticias y Publicaciones Recientes")
     
-    # Filtrar publicaciones que tengan al menos título o contenido real
     df_inicio_valido = df_aprobados[df_aprobados['titulo'].apply(lambda x: obtener_texto(x) != "") | 
                                    df_aprobados['contenido'].apply(lambda x: obtener_texto(x) != "")]
     
@@ -191,45 +193,60 @@ elif pestaña == "📢 Avisos Comunitarios":
             st.warning(f"**{obtener_texto(row.get('titulo'), '')}**\n\n{obtener_texto(row.get('contenido'), '')}\n\n_Contacto / Autor: {obtener_texto(row.get('autor'), 'Vecino')}_")
 
 # ---------------------------------------------------------
-# 5. PESTAÑA: PARTICIPA
+# 5. PESTAÑA: PARTICIPA (ACTUALIZADA CON EMAIL, TELÉFONO Y FECHA AUTOMÁTICA)
 # ---------------------------------------------------------
 elif pestaña == "✍️ Participa":
     st.header("✍️ Envía tu Noticia, Relato o Aviso")
-    st.write("Escribe tu aporte para que el equipo editorial lo revise.")
+    st.write("Escribe tu aporte para que el equipo editorial lo revise. Déjanos tus datos para poder contactarte.")
     
     with st.form("form_participa", clear_on_submit=True):
-        nombre = st.text_input("Tu Nombre o Apodo:")
-        categoria = st.selectbox("Selecciona la Sección:", [
-            "Inicio", 
-            "Memoria e Historia", 
-            "Galería", 
-            "Avisos Comunitarios"
-        ])
-        titulo = st.text_input("Título de la Publicación:")
-        contenido = st.text_area("Escribe tu texto aquí:")
+        col_nom, col_cat = st.columns(2)
+        with col_nom:
+            nombre = st.text_input("Tu Nombre o Apodo:*")
+        with col_cat:
+            categoria = st.selectbox("Selecciona la Sección:*", [
+                "Inicio", 
+                "Memoria e Historia", 
+                "Galería", 
+                "Avisos Comunitarios"
+            ])
+        
+        col_mail, col_tel = st.columns(2)
+        with col_mail:
+            correo = st.text_input("Correo Electrónico de Contacto:")
+        with col_tel:
+            telefono = st.text_input("Teléfono / WhatsApp de Contacto:")
+            
+        titulo = st.text_input("Título de la Publicación:*")
+        contenido = st.text_area("Escribe tu texto o noticia aquí:*")
         
         enviado = st.form_submit_button("📤 Enviar para Revisión")
         
         if enviado:
             if titulo.strip() == "" or contenido.strip() == "":
-                st.error("Por favor completa el título y el contenido.")
+                st.error("Por favor completa al menos el título y el contenido.")
             else:
+                # Captura la fecha y hora exactas del envío
+                fecha_envio = pd.Timestamp.now().strftime("%Y-%m-%d %H:%M")
+                
                 nueva_fila = {
                     "id": len(df_datos) + 1,
-                    "fecha": pd.Timestamp.now().strftime("%Y-%m-%d"),
+                    "fecha": fecha_envio,
                     "titulo": titulo,
                     "categoria": categoria,
                     "contenido": contenido,
-                    "autor": nombre if nombre.strip() != "" else "Vecino",
+                    "autor": nombre.strip() if nombre.strip() != "" else "Vecino",
+                    "correo": correo.strip(),
+                    "telefono": telefono.strip(),
                     "imagen": "",
                     "estado": "Pendiente"
                 }
                 df_datos = pd.concat([df_datos, pd.DataFrame([nueva_fila])], ignore_index=True)
                 guardar_datos(df_datos)
-                st.success("¡Muchas gracias! Tu publicación ha sido enviada al equipo editorial.")
+                st.success("¡Muchas gracias! Tu publicación ha sido enviada con éxito al equipo editorial.")
 
 # ---------------------------------------------------------
-# 6. PESTAÑA: ADMINISTRACIÓN
+# 6. PESTAÑA: ADMINISTRACIÓN (MUESTRA DATOS DE CONTACTO Y FECHA)
 # ---------------------------------------------------------
 elif pestaña == "🔒 Administración":
     st.header("🔒 Panel de Administración Editorial")
@@ -240,7 +257,10 @@ elif pestaña == "🔒 Administración":
         st.success("Acceso concedido al Equipo Editorial.")
         
         st.subheader("📋 Registros en la Base de Datos")
-        st.dataframe(df_datos[['id', 'fecha', 'titulo', 'categoria', 'autor', 'estado']])
+        cols_mostrar = ['id', 'fecha', 'titulo', 'categoria', 'autor', 'correo', 'telefono', 'estado']
+        # Mostrar solo las columnas existentes
+        cols_presentes = [c for c in cols_mostrar if c in df_datos.columns]
+        st.dataframe(df_datos[cols_presentes])
         
         st.subheader("📌 Publicaciones Pendientes")
         df_pendientes = df_datos[df_datos['estado'].astype(str).str.strip().str.lower() == 'pendiente']
@@ -249,8 +269,10 @@ elif pestaña == "🔒 Administración":
             st.info("No hay publicaciones pendientes por revisar.")
         else:
             for idx, row in df_pendientes.iterrows():
-                with st.expander(f"Revisar: {obtener_texto(row.get('titulo'), 'Sin título')}"):
+                with st.expander(f"Revisar: {obtener_texto(row.get('titulo'), 'Sin título')} (Enviado: {obtener_texto(row.get('fecha'), 'Sin fecha')})"):
                     st.write(f"**Autor:** {obtener_texto(row.get('autor'), 'Anónimo')}")
+                    st.write(f"**Correo:** {obtener_texto(row.get('correo'), 'No proporcionado')}")
+                    st.write(f"**Teléfono:** {obtener_texto(row.get('telefono'), 'No proporcionado')}")
                     st.write(f"**Categoría:** {obtener_texto(row.get('categoria'), 'General')}")
                     st.write(f"**Contenido:** {obtener_texto(row.get('contenido'), '')}")
                     
