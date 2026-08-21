@@ -34,7 +34,7 @@ def guardar_datos(df):
 
 df_datos = cargar_datos()
 
-# Asegurar columnas requeridas (incluyendo correo y telefono)
+# Asegurar columnas requeridas
 columnas_requeridas = [
     "id", "fecha", "titulo", "categoria", "contenido", 
     "autor", "correo", "telefono", "imagen", "estado"
@@ -50,8 +50,16 @@ def obtener_texto(val, por_defecto=""):
     return str(val).strip()
 
 # ---------------------------------------------------------
-# ESTILOS VISUALES
+# BANNER Y TÍTULO PRINCIPAL
 # ---------------------------------------------------------
+# Muestra el banner si el archivo existe en la carpeta
+if os.path.exists("banner.jpg"):
+    st.image("banner.jpg", use_container_width=True)
+elif os.path.exists("banner.jpeg"):
+    st.image("banner.jpeg", use_container_width=True)
+elif os.path.exists("banner.png"):
+    st.image("banner.png", use_container_width=True)
+
 st.markdown("""
     <style>
     .main-title {
@@ -59,13 +67,14 @@ st.markdown("""
         text-align: center;
         font-size: 2.5rem;
         font-weight: bold;
+        margin-top: 15px;
         margin-bottom: 0px;
     }
     .sub-title {
         color: #333333;
         text-align: center;
         font-size: 1.1rem;
-        margin-bottom: 20px;
+        margin-bottom: 25px;
     }
     .card-noticia {
         background-color: #F4F9F4;
@@ -94,7 +103,7 @@ opciones_menu = [
 
 pestaña = st.sidebar.radio("Navegación", opciones_menu)
 
-# Filtrar publicaciones aprobadas y válidas (no vacías)
+# Filtrar publicaciones aprobadas
 def es_aprobado(val):
     v = str(val).strip().lower()
     return v in ['aprobado', 'aprobada', 'true']
@@ -131,7 +140,7 @@ if pestaña == "🏠 Inicio":
             """, unsafe_allow_html=True)
             
             if imagen != "":
-                st.image(imagen, use_column_width=True)
+                st.image(imagen, use_container_width=True)
             st.divider()
 
 # ---------------------------------------------------------
@@ -157,7 +166,7 @@ elif pestaña == "📜 Memoria e Historia":
             st.caption(f"Publicado el {fecha} | Relatado por: {autor}")
             st.write(contenido)
             if imagen != "":
-                st.image(imagen, use_column_width=True)
+                st.image(imagen, use_container_width=True)
             st.divider()
 
 # ---------------------------------------------------------
@@ -175,7 +184,7 @@ elif pestaña == "📸 Galería":
         cols = st.columns(3)
         for idx, (_, row) in enumerate(df_galeria.iterrows()):
             with cols[idx % 3]:
-                st.image(row['imagen'], use_column_width=True)
+                st.image(row['imagen'], use_container_width=True)
                 st.caption(f"**{obtener_texto(row.get('titulo'), '')}**\n_{obtener_texto(row.get('fecha'), '')}_")
 
 # ---------------------------------------------------------
@@ -193,7 +202,7 @@ elif pestaña == "📢 Avisos Comunitarios":
             st.warning(f"**{obtener_texto(row.get('titulo'), '')}**\n\n{obtener_texto(row.get('contenido'), '')}\n\n_Contacto / Autor: {obtener_texto(row.get('autor'), 'Vecino')}_")
 
 # ---------------------------------------------------------
-# 5. PESTAÑA: PARTICIPA (ACTUALIZADA CON EMAIL, TELÉFONO Y FECHA AUTOMÁTICA)
+# 5. PESTAÑA: PARTICIPA
 # ---------------------------------------------------------
 elif pestaña == "✍️ Participa":
     st.header("✍️ Envía tu Noticia, Relato o Aviso")
@@ -226,7 +235,6 @@ elif pestaña == "✍️ Participa":
             if titulo.strip() == "" or contenido.strip() == "":
                 st.error("Por favor completa al menos el título y el contenido.")
             else:
-                # Captura la fecha y hora exactas del envío
                 fecha_envio = pd.Timestamp.now().strftime("%Y-%m-%d %H:%M")
                 
                 nueva_fila = {
@@ -246,7 +254,7 @@ elif pestaña == "✍️ Participa":
                 st.success("¡Muchas gracias! Tu publicación ha sido enviada con éxito al equipo editorial.")
 
 # ---------------------------------------------------------
-# 6. PESTAÑA: ADMINISTRACIÓN (MUESTRA DATOS DE CONTACTO Y FECHA)
+# 6. PESTAÑA: ADMINISTRACIÓN
 # ---------------------------------------------------------
 elif pestaña == "🔒 Administración":
     st.header("🔒 Panel de Administración Editorial")
@@ -258,7 +266,6 @@ elif pestaña == "🔒 Administración":
         
         st.subheader("📋 Registros en la Base de Datos")
         cols_mostrar = ['id', 'fecha', 'titulo', 'categoria', 'autor', 'correo', 'telefono', 'estado']
-        # Mostrar solo las columnas existentes
         cols_presentes = [c for c in cols_mostrar if c in df_datos.columns]
         st.dataframe(df_datos[cols_presentes])
         
