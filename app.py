@@ -14,6 +14,39 @@ st.set_page_config(
 
 CLAVE_EDITORIAL = "bosque2026"
 ARCHIVO_DATOS = "datos_periodico.xlsx"
+ARCHIVO_VISITAS = "visitas.txt"
+
+# ---------------------------------------------------------
+# GESTIÓN DEL CONTADOR DE VISITAS
+# ---------------------------------------------------------
+def registrar_y_obtener_visitas():
+    if "visita_registrada" not in st.session_state:
+        st.session_state["visita_registrada"] = True
+        
+        visitas_actuales = 0
+        if os.path.exists(ARCHIVO_VISITAS):
+            try:
+                with open(ARCHIVO_VISITAS, "r") as f:
+                    visitas_actuales = int(f.read().strip())
+            except ValueError:
+                visitas_actuales = 0
+        
+        visitas_actuales += 1
+        
+        with open(ARCHIVO_VISITAS, "w") as f:
+            f.write(str(visitas_actuales))
+            
+        return visitas_actuales
+    else:
+        if os.path.exists(ARCHIVO_VISITAS):
+            try:
+                with open(ARCHIVO_VISITAS, "r") as f:
+                    return int(f.read().strip())
+            except ValueError:
+                return 1
+        return 1
+
+total_visitas = registrar_y_obtener_visitas()
 
 # ---------------------------------------------------------
 # CARGA Y LIMPIEZA DE DATOS
@@ -34,7 +67,6 @@ def guardar_datos(df):
 
 df_datos = cargar_datos()
 
-# Asegurar columnas requeridas
 columnas_requeridas = [
     "id", "fecha", "titulo", "categoria", "contenido", 
     "autor", "correo", "telefono", "imagen", "estado"
@@ -43,7 +75,6 @@ for col in columnas_requeridas:
     if col not in df_datos.columns:
         df_datos[col] = ""
 
-# Función auxiliar para limpiar textos y evitar "nan"
 def obtener_texto(val, por_defecto=""):
     if pd.isna(val) or str(val).strip().lower() in ['nan', 'none', '']:
         return por_defecto
@@ -52,13 +83,10 @@ def obtener_texto(val, por_defecto=""):
 # ---------------------------------------------------------
 # BANNER Y TÍTULO PRINCIPAL
 # ---------------------------------------------------------
-# Muestra el banner si el archivo existe en la carpeta
-if os.path.exists("banner.jpg"):
-    st.image("banner.jpg", use_container_width=True)
-elif os.path.exists("banner.jpeg"):
-    st.image("banner.jpeg", use_container_width=True)
-elif os.path.exists("banner.png"):
-    st.image("banner.png", use_container_width=True)
+for nombre_banner in ["banner.jpg", "banner.jpeg", "banner.png", "Banner.jpg"]:
+    if os.path.exists(nombre_banner):
+        st.image(nombre_banner, use_container_width=True)
+        break
 
 st.markdown("""
     <style>
@@ -90,7 +118,7 @@ st.markdown('<div class="main-title">🌳 Periódico Digital El Bosque 1</div>',
 st.markdown('<div class="sub-title">La Voz que Une a Nuestra Comunidad • La Pincoya, Huechuraba</div>', unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# MENÚ DE NAVEGACIÓN
+# MENÚ DE NAVEGACIÓN Y CONTADOR
 # ---------------------------------------------------------
 opciones_menu = [
     "🏠 Inicio", 
@@ -102,6 +130,9 @@ opciones_menu = [
 ]
 
 pestaña = st.sidebar.radio("Navegación", opciones_menu)
+
+st.sidebar.divider()
+st.sidebar.metric(label="👀 Visitas Totales", value=f"{total_visitas:,}".replace(",", "."))
 
 # Filtrar publicaciones aprobadas
 def es_aprobado(val):
