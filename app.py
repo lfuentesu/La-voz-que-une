@@ -1,329 +1,208 @@
 import streamlit as st
 import pandas as pd
 import os
+from datetime import datetime
 
-# ---------------------------------------------------------
-# CONFIGURACIÓN DE LA PÁGINA
-# ---------------------------------------------------------
+# Configuración de la página
 st.set_page_config(
-    page_title="Periódico Digital El Bosque 1",
-    page_icon="🌳",
-    layout="wide",
-    initial_sidebar_state="expanded"
+    page_title="La Voz que Une",
+    page_icon="📰",
+    layout="wide"
 )
 
-CLAVE_EDITORIAL = "bosque2026"
-ARCHIVO_DATOS = "datos_periodico.xlsx"
-ARCHIVO_VISITAS = "visitas.txt"
+EXCEL_FILE = "datos_periodico.xlsx"
+VISITAS_FILE = "visitas.txt"
 
 # ---------------------------------------------------------
-# GESTIÓN DEL CONTADOR DE VISITAS
+# FUNCIONES AUXILIARES: CONTADOR DE VISITAS
 # ---------------------------------------------------------
-def registrar_y_obtener_visitas():
-    if "visita_registrada" not in st.session_state:
-        st.session_state["visita_registrada"] = True
-        
-        visitas_actuales = 0
-        if os.path.exists(ARCHIVO_VISITAS):
-            try:
-                with open(ARCHIVO_VISITAS, "r") as f:
-                    visitas_actuales = int(f.read().strip())
-            except ValueError:
-                visitas_actuales = 0
-        
-        visitas_actuales += 1
-        
-        with open(ARCHIVO_VISITAS, "w") as f:
-            f.write(str(visitas_actuales))
-            
-        return visitas_actuales
-    else:
-        if os.path.exists(ARCHIVO_VISITAS):
-            try:
-                with open(ARCHIVO_VISITAS, "r") as f:
-                    return int(f.read().strip())
-            except ValueError:
-                return 1
+def gestionar_visitas():
+    if not os.path.exists(VISITAS_FILE):
+        with open(VISITAS_FILE, "w") as f:
+            f.write("1")
         return 1
-
-total_visitas = registrar_y_obtener_visitas()
-
-# ---------------------------------------------------------
-# CARGA Y LIMPIEZA DE DATOS
-# ---------------------------------------------------------
-def cargar_datos():
-    if os.path.exists(ARCHIVO_DATOS):
-        df = pd.read_excel(ARCHIVO_DATOS)
-        df.columns = [str(c).strip().lower() for c in df.columns]
-        return df
     else:
-        return pd.DataFrame(columns=[
-            "id", "fecha", "titulo", "categoria", "contenido", 
-            "autor", "correo", "telefono", "imagen", "estado"
-        ])
+        with open(VISITAS_FILE, "r") as f:
+            try:
+                conteo = int(f.read().strip())
+            except ValueError:
+                conteo = 0
+        conteo += 1
+        with open(VISITAS_FILE, "w") as f:
+            f.write(str(conteo))
+        return conteo
 
-def guardar_datos(df):
-    df.to_excel(ARCHIVO_DATOS, index=False)
-
-df_datos = cargar_datos()
-
-columnas_requeridas = [
-    "id", "fecha", "titulo", "categoria", "contenido", 
-    "autor", "correo", "telefono", "imagen", "estado"
-]
-for col in columnas_requeridas:
-    if col not in df_datos.columns:
-        df_datos[col] = ""
-
-def obtener_texto(val, por_defecto=""):
-    if pd.isna(val) or str(val).strip().lower() in ['nan', 'none', '']:
-        return por_defecto
-    return str(val).strip()
+if "visita_registrada" not in st.session_state:
+    st.session_state.total_visitas = gestionar_visitas()
+    st.session_state.visita_registrada = True
 
 # ---------------------------------------------------------
-# BANNER Y TÍTULO PRINCIPAL
+# FUNCIONES AUXILIARES: SISTEMA DE COMENTARIOS
 # ---------------------------------------------------------
-for nombre_banner in ["banner.jpg", "banner.jpeg", "banner.png", "Banner.jpg"]:
-    if os.path.exists(nombre_banner):
-        st.image(nombre_banner, use_container_width=True)
-        break
-
-st.markdown("""
-    <style>
-    .main-title {
-        color: #1E5631;
-        text-align: center;
-        font-size: 2.5rem;
-        font-weight: bold;
-        margin-top: 15px;
-        margin-bottom: 0px;
-    }
-    .sub-title {
-        color: #333333;
-        text-align: center;
-        font-size: 1.1rem;
-        margin-bottom: 25px;
-    }
-    .card-noticia {
-        background-color: #F4F9F4;
-        padding: 18px;
-        border-radius: 10px;
-        border-left: 5px solid #1E5631;
-        margin-bottom: 15px;
-    }
-    </style>
-""", unsafe_allow_html=True)
-
-st.markdown('<div class="main-title">🌳 Periódico Digital El Bosque 1</div>', unsafe_allow_html=True)
-st.markdown('<div class="sub-title">La Voz que Une a Nuestra Comunidad • La Pincoya, Huechuraba</div>', unsafe_allow_html=True)
-
-# ---------------------------------------------------------
-# MENÚ DE NAVEGACIÓN Y CONTADOR
-# ---------------------------------------------------------
-opciones_menu = [
-    "🏠 Inicio", 
-    "📜 Memoria e Historia", 
-    "📸 Galería", 
-    "📢 Avisos Comunitarios", 
-    "✍️ Participa", 
-    "🔒 Administración"
-]
-
-pestaña = st.sidebar.radio("Navegación", opciones_menu)
-
-st.sidebar.divider()
-st.sidebar.metric(label="👀 Visitas Totales", value=f"{total_visitas:,}".replace(",", "."))
-
-# Filtrar publicaciones aprobadas
-def es_aprobado(val):
-    v = str(val).strip().lower()
-    return v in ['aprobado', 'aprobada', 'true']
-
-df_aprobados = df_datos[df_datos['estado'].apply(es_aprobado)].copy()
-
-# ---------------------------------------------------------
-# 1. PESTAÑA: INICIO
-# ---------------------------------------------------------
-if pestaña == "🏠 Inicio":
-    st.header("🏠 Noticias y Publicaciones Recientes")
+def guardar_comentario(seccion, nombre, contacto, comentario):
+    nuevo_comentario = pd.DataFrame([{
+        "Fecha": datetime.now().strftime("%Y-%m-%d %H:%M"),
+        "Sección": seccion,
+        "Nombre": nombre,
+        "Contacto": contacto,
+        "Comentario": comentario,
+        "Estado": "Aprobado"
+    }])
     
-    df_inicio_valido = df_aprobados[df_aprobados['titulo'].apply(lambda x: obtener_texto(x) != "") | 
-                                   df_aprobados['contenido'].apply(lambda x: obtener_texto(x) != "")]
-    
-    if df_inicio_valido.empty:
-        st.info("Aún no hay publicaciones en la portada.")
-    else:
-        for _, row in df_inicio_valido.iterrows():
-            titulo = obtener_texto(row.get('titulo'), "Sin título")
-            contenido = obtener_texto(row.get('contenido'), "")
-            autor = obtener_texto(row.get('autor'), "Vecino de El Bosque 1")
-            fecha = obtener_texto(row.get('fecha'), "")
-            categoria = obtener_texto(row.get('categoria'), "General")
-            imagen = obtener_texto(row.get('imagen'), "")
-
-            st.markdown(f"""
-            <div class="card-noticia">
-                <span style="color:#888; font-size:0.85rem;">{fecha} | Categoría: <b>{categoria}</b></span>
-                <h3 style="margin-top:5px; color:#1E5631;">{titulo}</h3>
-                <p>{contenido}</p>
-                <small><b>Por:</b> {autor}</small>
-            </div>
-            """, unsafe_allow_html=True)
+    try:
+        if os.path.exists(EXCEL_FILE):
+            excel_obj = pd.ExcelFile(EXCEL_FILE)
+            if "Comentarios" in excel_obj.sheet_names:
+                df_existente = pd.read_excel(EXCEL_FILE, sheet_name="Comentarios")
+                df_updated = pd.concat([df_existente, nuevo_comentario], ignore_index=True)
+            else:
+                df_updated = nuevo_comentario
             
-            if imagen != "":
-                st.image(imagen, use_container_width=True)
-            st.divider()
+            with pd.ExcelWriter(EXCEL_FILE, engine="openpyxl", mode="a", if_sheet_exists="replace") as writer:
+                df_updated.to_excel(writer, sheet_name="Comentarios", index=False)
+        else:
+            nuevo_comentario.to_excel(EXCEL_FILE, sheet_name="Comentarios", index=False)
+    except Exception as e:
+        st.error(f"Error al guardar el comentario: {e}")
 
-# ---------------------------------------------------------
-# 2. PESTAÑA: MEMORIA E HISTORIA
-# ---------------------------------------------------------
-elif pestaña == "📜 Memoria e Historia":
-    st.header("📜 Memoria e Historia de Nuestro Barrio")
-    st.write("Relatos, fotografías y recuerdos del camino recorrido por los pobladores de El Bosque 1 y La Pincoya.")
+def mostrar_seccion_comentarios(seccion):
+    st.markdown("---")
+    st.subheader("💬 Comentarios de la Comunidad")
     
-    df_historia = df_aprobados[df_aprobados['categoria'].astype(str).str.strip().str.lower() == 'memoria e historia']
-    
-    if df_historia.empty:
-        st.info("No hay relatos históricos publicados todavía en esta pestaña.")
-    else:
-        for _, row in df_historia.iterrows():
-            titulo = obtener_texto(row.get('titulo'), "Sin título")
-            contenido = obtener_texto(row.get('contenido'), "")
-            autor = obtener_texto(row.get('autor'), "Anónimo")
-            fecha = obtener_texto(row.get('fecha'), "")
-            imagen = obtener_texto(row.get('imagen'), "")
+    # Cargar comentarios
+    try:
+        if os.path.exists(EXCEL_FILE):
+            excel_obj = pd.ExcelFile(EXCEL_FILE)
+            if "Comentarios" in excel_obj.sheet_names:
+                df = pd.read_excel(EXCEL_FILE, sheet_name="Comentarios")
+                if "Sección" in df.columns and "Estado" in df.columns:
+                    df_seccion = df[(df["Sección"] == seccion) & (df["Estado"] == "Aprobado")]
+                    
+                    if not df_seccion.empty:
+                        for _, row in df_seccion.iterrows():
+                            with st.chat_message("user"):
+                                st.write(f"**{row['Nombre']}** · *{row['Fecha']}*")
+                                st.write(row["Comentario"])
+                    else:
+                        st.info("Aún no hay comentarios en esta sección. ¡Sé el primero en opinar!")
+                else:
+                    st.info("Aún no hay comentarios en esta sección.")
+            else:
+                st.info("Aún no hay comentarios en esta sección. ¡Sé el primero en opinar!")
+        else:
+            st.info("Aún no hay comentarios registrados.")
+    except Exception:
+        st.info("Aún no hay comentarios registrados.")
 
-            st.markdown(f"### {titulo}")
-            st.caption(f"Publicado el {fecha} | Relatado por: {autor}")
-            st.write(contenido)
-            if imagen != "":
-                st.image(imagen, use_container_width=True)
-            st.divider()
-
-# ---------------------------------------------------------
-# 3. PESTAÑA: GALERÍA DE FOTOS
-# ---------------------------------------------------------
-elif pestaña == "📸 Galería":
-    st.header("📸 Galería Fotográfica")
-    st.write("Retratos de nuestros eventos, reuniones, vecinos e historia visual comunitaria.")
-    
-    df_galeria = df_aprobados[df_aprobados['imagen'].apply(lambda x: obtener_texto(x) != "")]
-    
-    if df_galeria.empty:
-        st.info("Aún no hay imágenes publicadas en la galería.")
-    else:
-        cols = st.columns(3)
-        for idx, (_, row) in enumerate(df_galeria.iterrows()):
-            with cols[idx % 3]:
-                st.image(row['imagen'], use_container_width=True)
-                st.caption(f"**{obtener_texto(row.get('titulo'), '')}**\n_{obtener_texto(row.get('fecha'), '')}_")
-
-# ---------------------------------------------------------
-# 4. PESTAÑA: AVISOS COMUNITARIOS
-# ---------------------------------------------------------
-elif pestaña == "📢 Avisos Comunitarios":
-    st.header("📢 Avisos y Datos del Barrio")
-    
-    df_avisos = df_aprobados[df_aprobados['categoria'].astype(str).str.strip().str.lower() == 'avisos comunitarios']
-    
-    if df_avisos.empty:
-        st.info("No hay avisos vigentes en este momento.")
-    else:
-        for _, row in df_avisos.iterrows():
-            st.warning(f"**{obtener_texto(row.get('titulo'), '')}**\n\n{obtener_texto(row.get('contenido'), '')}\n\n_Contacto / Autor: {obtener_texto(row.get('autor'), 'Vecino')}_")
-
-# ---------------------------------------------------------
-# 5. PESTAÑA: PARTICIPA
-# ---------------------------------------------------------
-elif pestaña == "✍️ Participa":
-    st.header("✍️ Envía tu Noticia, Relato o Aviso")
-    st.write("Escribe tu aporte para que el equipo editorial lo revise. Déjanos tus datos para poder contactarte.")
-    
-    with st.form("form_participa", clear_on_submit=True):
-        col_nom, col_cat = st.columns(2)
-        with col_nom:
-            nombre = st.text_input("Tu Nombre o Apodo:*")
-        with col_cat:
-            categoria = st.selectbox("Selecciona la Sección:*", [
-                "Inicio", 
-                "Memoria e Historia", 
-                "Galería", 
-                "Avisos Comunitarios"
-            ])
-        
-        col_mail, col_tel = st.columns(2)
-        with col_mail:
-            correo = st.text_input("Correo Electrónico de Contacto:")
-        with col_tel:
-            telefono = st.text_input("Teléfono / WhatsApp de Contacto:")
-            
-        titulo = st.text_input("Título de la Publicación:*")
-        contenido = st.text_area("Escribe tu texto o noticia aquí:*")
-        
-        enviado = st.form_submit_button("📤 Enviar para Revisión")
+    # Formulario de ingreso de comentarios
+    st.markdown("### Déjanos tu opinión o aporte")
+    with st.form(key=f"form_comentario_{seccion}"):
+        nombre = st.text_input("Nombre y Apellido *")
+        contacto = st.text_input("Correo electrónico o Teléfono de contacto *")
+        comentario = st.text_area("Escribe tu comentario aquí *")
+        enviado = st.form_submit_button("Publicar Comentario")
         
         if enviado:
-            if titulo.strip() == "" or contenido.strip() == "":
-                st.error("Por favor completa al menos el título y el contenido.")
+            if not nombre.strip() or not contacto.strip() or not comentario.strip():
+                st.error("Por favor completa todos los campos marcados con (*).")
             else:
-                fecha_envio = pd.Timestamp.now().strftime("%Y-%m-%d %H:%M")
-                
-                nueva_fila = {
-                    "id": len(df_datos) + 1,
-                    "fecha": fecha_envio,
-                    "titulo": titulo,
-                    "categoria": categoria,
-                    "contenido": contenido,
-                    "autor": nombre.strip() if nombre.strip() != "" else "Vecino",
-                    "correo": correo.strip(),
-                    "telefono": telefono.strip(),
-                    "imagen": "",
-                    "estado": "Pendiente"
-                }
-                df_datos = pd.concat([df_datos, pd.DataFrame([nueva_fila])], ignore_index=True)
-                guardar_datos(df_datos)
-                st.success("¡Muchas gracias! Tu publicación ha sido enviada con éxito al equipo editorial.")
+                guardar_comentario(seccion, nombre, contacto, comentario)
+                st.success("¡Muchas gracias! Tu comentario ha sido publicado exitosamente.")
+                st.rerun()
 
 # ---------------------------------------------------------
-# 6. PESTAÑA: ADMINISTRACIÓN
+# BARRA LATERAL (MENÚ Y CONTADOR)
 # ---------------------------------------------------------
-elif pestaña == "🔒 Administración":
-    st.header("🔒 Panel de Administración Editorial")
+st.sidebar.title("La Voz que Une")
+st.sidebar.markdown("Periódico Comunitario digital")
+
+opcion = st.sidebar.radio(
+    "Navegación:",
+    ["Inicio", "Historia", "Galería", "Participa"]
+)
+
+st.sidebar.markdown("---")
+if "total_visitas" in st.session_state:
+    st.sidebar.metric(label="👀 Visitas Totales", value=st.session_state.total_visitas)
+
+st.sidebar.caption("— Periódico La Voz que Une —")
+
+# ---------------------------------------------------------
+# CONTENIDO PRINCIPAL POR SECCIONES
+# ---------------------------------------------------------
+
+# 1. INICIO
+if opcion == "Inicio":
+    st.title("📰 La Voz que Une - Edición Digital")
+    st.write("Bienvenidos al espacio informativo y comunitario. Aquí compartimos las últimas novedades y noticias de nuestra comunidad.")
     
-    clave_ingresada = st.text_input("Ingresa la clave secreta:", type="password")
-    
-    if clave_ingresada == CLAVE_EDITORIAL:
-        st.success("Acceso concedido al Equipo Editorial.")
-        
-        st.subheader("📋 Registros en la Base de Datos")
-        cols_mostrar = ['id', 'fecha', 'titulo', 'categoria', 'autor', 'correo', 'telefono', 'estado']
-        cols_presentes = [c for c in cols_mostrar if c in df_datos.columns]
-        st.dataframe(df_datos[cols_presentes])
-        
-        st.subheader("📌 Publicaciones Pendientes")
-        df_pendientes = df_datos[df_datos['estado'].astype(str).str.strip().str.lower() == 'pendiente']
-        
-        if df_pendientes.empty:
-            st.info("No hay publicaciones pendientes por revisar.")
-        else:
-            for idx, row in df_pendientes.iterrows():
-                with st.expander(f"Revisar: {obtener_texto(row.get('titulo'), 'Sin título')} (Enviado: {obtener_texto(row.get('fecha'), 'Sin fecha')})"):
-                    st.write(f"**Autor:** {obtener_texto(row.get('autor'), 'Anónimo')}")
-                    st.write(f"**Correo:** {obtener_texto(row.get('correo'), 'No proporcionado')}")
-                    st.write(f"**Teléfono:** {obtener_texto(row.get('telefono'), 'No proporcionado')}")
-                    st.write(f"**Categoría:** {obtener_texto(row.get('categoria'), 'General')}")
-                    st.write(f"**Contenido:** {obtener_texto(row.get('contenido'), '')}")
+    # Cargar y mostrar publicaciones desde Excel
+    if os.path.exists(EXCEL_FILE):
+        try:
+            excel_obj = pd.ExcelFile(EXCEL_FILE)
+            if "Noticias" in excel_obj.sheet_names:
+                df_noticias = pd.read_excel(EXCEL_FILE, sheet_name="Noticias")
+                
+                if not df_noticias.empty:
+                    df_noticias.columns = [str(col).strip().capitalize() for col in df_noticias.columns]
                     
-                    col1, col2 = st.columns(2)
-                    with col1:
-                        if st.button(f"✅ Aprobar #{row['id']}", key=f"ap_{row['id']}"):
-                            df_datos.loc[df_datos['id'] == row['id'], 'estado'] = 'Aprobado'
-                            guardar_datos(df_datos)
-                            st.rerun()
-                    with col2:
-                        if st.button(f"🗑️ Descartar #{row['id']}", key=f"desc_{row['id']}"):
-                            df_datos = df_datos[df_datos['id'] != row['id']]
-                            guardar_datos(df_datos)
-                            st.rerun()
-    elif clave_ingresada != "":
-        st.error("Clave incorrecta.")
+                    if "Estado" in df_noticias.columns:
+                        df_visibles = df_noticias[df_noticias["Estado"].astype(str).str.contains("Aprobad", case=False, na=False)]
+                    else:
+                        df_visibles = df_noticias
+
+                    if not df_visibles.empty:
+                        st.markdown("### Últimas Publicaciones")
+                        for _, row in df_visibles.iterrows():
+                            titulo = row.get("Título", row.get("Titulo", "Aviso Comunitario"))
+                            contenido = row.get("Contenido", row.get("Detalle", row.get("Texto", "")))
+                            fecha = row.get("Fecha", "")
+
+                            st.subheader(titulo)
+                            if pd.notna(fecha) and str(fecha).strip() != "":
+                                st.caption(f"📅 Publicado el {fecha}")
+                            st.write(contenido)
+                            st.markdown("---")
+        except Exception as e:
+            st.error(f"Error al leer las noticias: {e}")
+
+    # FORMULARIO DE COMENTARIOS EN INICIO
+    mostrar_seccion_comentarios("Inicio")
+
+# 2. HISTORIA
+elif opcion == "Historia":
+    st.title("📜 Nuestra Historia")
+    st.write("Un recorrido por la memoria histórica, el patrimonio y los hitos que han marcado el desarrollo de nuestro entorno y su gente.")
+    
+    st.markdown("""
+    > *"Un pueblo que conoce su historia es un pueblo que proyecta su futuro con identidad y dignidad."*
+    """)
+    
+    # FORMULARIO DE COMENTARIOS EN HISTORIA
+    mostrar_seccion_comentarios("Historia")
+
+# 3. GALERÍA
+elif opcion == "Galería":
+    st.title("🖼️ Galería Comunitaria")
+    st.write("Registros visuales, fotografías patrimoniales y actividades destacadas de la comunidad.")
+    
+    # FORMULARIO DE COMENTARIOS EN GALERÍA
+    mostrar_seccion_comentarios("Galería")
+
+# 4. PARTICIPA
+elif opcion == "Participa":
+    st.title("🤝 Participa y Envía tu Nota")
+    st.write("Este periódico lo hacemos entre todos. Déjanos tu propuesta de noticia, opinión o fotografía.")
+    
+    with st.form(key="form_participa"):
+        nombre_p = st.text_input("Tu Nombre")
+        correo_p = st.text_input("Correo o Teléfono de Contacto")
+        mensaje_p = st.text_area("Propuesta o Noticia")
+        archivo_p = st.file_uploader("Adjuntar imagen (opcional)", type=["png", "jpg", "jpeg"])
+        
+        btn_participa = st.form_submit_button("Enviar Colaboración")
+        if btn_participa:
+            if not nombre_p.strip() or not mensaje_p.strip():
+                st.error("Por favor completa tu nombre y el mensaje.")
+            else:
+                st.success("¡Gracias por tu colaboración! El equipo editorial revisará tu aporte.")
