@@ -12,7 +12,18 @@ st.set_page_config(
 
 EXCEL_FILE = "datos_periodico.xlsx"
 VISITAS_FILE = "visitas.txt"
-CLAVE_ADMIN = "1234"  # Puede cambiar esta clave si lo desea
+CLAVE_ADMIN = "1234"  # Clave de administración
+
+# ---------------------------------------------------------
+# FUNCIONES AUXILIARES: BANNER O ENCABEZADO
+# ---------------------------------------------------------
+def mostrar_banner():
+    # Carga directamente la imagen del banner
+    posibles_nombres = ["banner.jpeg", "banner.jpg", "banner.png", "encabezado.png", "encabezado.jpg"]
+    for nombre in posibles_nombres:
+        if os.path.exists(nombre):
+            st.image(nombre, use_container_width=True)
+            break
 
 # ---------------------------------------------------------
 # FUNCIONES AUXILIARES: CONTADOR DE VISITAS
@@ -132,6 +143,7 @@ st.sidebar.caption("— Periódico La Voz que Une —")
 
 # 1. INICIO
 if opcion == "Inicio":
+    mostrar_banner()
     st.title("📰 La Voz que Une - Edición Digital")
     st.write("Bienvenidos al espacio informativo y comunitario. Aquí compartimos las últimas novedades y noticias de nuestra comunidad.")
     
@@ -168,6 +180,7 @@ if opcion == "Inicio":
 
 # 2. HISTORIA
 elif opcion == "Historia":
+    mostrar_banner()
     st.title("📜 Nuestra Historia")
     st.write("Un recorrido por la memoria histórica, el patrimonio y los hitos que han marcado el desarrollo de nuestro entorno y su gente.")
     
@@ -179,6 +192,7 @@ elif opcion == "Historia":
 
 # 3. GALERÍA
 elif opcion == "Galería":
+    mostrar_banner()
     st.title("🖼️ Galería Comunitaria")
     st.write("Registros visuales, fotografías patrimoniales y actividades destacadas de la comunidad.")
     
@@ -186,6 +200,7 @@ elif opcion == "Galería":
 
 # 4. PARTICIPA
 elif opcion == "Participa":
+    mostrar_banner()
     st.title("🤝 Participa y Envía tu Nota")
     st.write("Este periódico lo hacemos entre todos. Déjanos tu propuesta de noticia, opinión o fotografía.")
     
@@ -200,7 +215,6 @@ elif opcion == "Participa":
             if not nombre_p.strip() or not mensaje_p.strip():
                 st.error("Por favor completa tu nombre y el mensaje.")
             else:
-                # Guardar propuesta como pendiente en Excel
                 nueva_noticia = pd.DataFrame([{
                     "Fecha": datetime.now().strftime("%Y-%m-%d %H:%M"),
                     "Título": f"Aporte de {nombre_p}",
@@ -233,9 +247,8 @@ elif opcion == "Administración":
     
     if password == CLAVE_ADMIN:
         st.success("Acceso concedido.")
-        st.subheader("📌 Gestión de Noticia y Avisos")
+        st.subheader("📌 Gestión de Noticias y Avisos")
         
-        # Formulario para publicar directamente una nueva noticia/aviso
         st.markdown("#### Publicar Nueva Noticia o Aviso")
         with st.form("form_admin_noticia"):
             titulo_admin = st.text_input("Título de la noticia/aviso")
