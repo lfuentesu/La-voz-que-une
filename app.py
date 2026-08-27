@@ -12,6 +12,7 @@ st.set_page_config(
 
 EXCEL_FILE = "datos_periodico.xlsx"
 VISITAS_FILE = "visitas.txt"
+CLAVE_ADMIN = "1234"  # Puede cambiar esta clave si lo desea
 
 # ---------------------------------------------------------
 # FUNCIONES AUXILIARES: CONTADOR DE VISITAS
@@ -69,7 +70,6 @@ def mostrar_seccion_comentarios(seccion):
     st.markdown("---")
     st.subheader("💬 Comentarios de la Comunidad")
     
-    # Cargar comentarios
     try:
         if os.path.exists(EXCEL_FILE):
             excel_obj = pd.ExcelFile(EXCEL_FILE)
@@ -94,7 +94,6 @@ def mostrar_seccion_comentarios(seccion):
     except Exception:
         st.info("Aún no hay comentarios registrados.")
 
-    # Formulario de ingreso de comentarios
     st.markdown("### Déjanos tu opinión o aporte")
     with st.form(key=f"form_comentario_{seccion}"):
         nombre = st.text_input("Nombre y Apellido *")
@@ -118,7 +117,7 @@ st.sidebar.markdown("Periódico Comunitario digital")
 
 opcion = st.sidebar.radio(
     "Navegación:",
-    ["Inicio", "Historia", "Galería", "Participa"]
+    ["Inicio", "Historia", "Galería", "Participa", "Administración"]
 )
 
 st.sidebar.markdown("---")
@@ -136,7 +135,6 @@ if opcion == "Inicio":
     st.title("📰 La Voz que Une - Edición Digital")
     st.write("Bienvenidos al espacio informativo y comunitario. Aquí compartimos las últimas novedades y noticias de nuestra comunidad.")
     
-    # Cargar y mostrar publicaciones desde Excel
     if os.path.exists(EXCEL_FILE):
         try:
             excel_obj = pd.ExcelFile(EXCEL_FILE)
@@ -166,7 +164,6 @@ if opcion == "Inicio":
         except Exception as e:
             st.error(f"Error al leer las noticias: {e}")
 
-    # FORMULARIO DE COMENTARIOS EN INICIO
     mostrar_seccion_comentarios("Inicio")
 
 # 2. HISTORIA
@@ -178,7 +175,6 @@ elif opcion == "Historia":
     > *"Un pueblo que conoce su historia es un pueblo que proyecta su futuro con identidad y dignidad."*
     """)
     
-    # FORMULARIO DE COMENTARIOS EN HISTORIA
     mostrar_seccion_comentarios("Historia")
 
 # 3. GALERÍA
@@ -186,7 +182,6 @@ elif opcion == "Galería":
     st.title("🖼️ Galería Comunitaria")
     st.write("Registros visuales, fotografías patrimoniales y actividades destacadas de la comunidad.")
     
-    # FORMULARIO DE COMENTARIOS EN GALERÍA
     mostrar_seccion_comentarios("Galería")
 
 # 4. PARTICIPA
@@ -205,4 +200,88 @@ elif opcion == "Participa":
             if not nombre_p.strip() or not mensaje_p.strip():
                 st.error("Por favor completa tu nombre y el mensaje.")
             else:
-                st.success("¡Gracias por tu colaboración! El equipo editorial revisará tu aporte.")
+                # Guardar propuesta como pendiente en Excel
+                nueva_noticia = pd.DataFrame([{
+                    "Fecha": datetime.now().strftime("%Y-%m-%d %H:%M"),
+                    "Título": f"Aporte de {nombre_p}",
+                    "Contenido": mensaje_p,
+                    "Contacto": correo_p,
+                    "Estado": "Pendiente"
+                }])
+                
+                try:
+                    if os.path.exists(EXCEL_FILE):
+                        excel_obj = pd.ExcelFile(EXCEL_FILE)
+                        if "Noticias" in excel_obj.sheet_names:
+                            df_ex = pd.read_excel(EXCEL_FILE, sheet_name="Noticias")
+                            df_up = pd.concat([df_ex, nueva_noticia], ignore_index=True)
+                        else:
+                            df_up = nueva_noticia
+                        with pd.ExcelWriter(EXCEL_FILE, engine="openpyxl", mode="a", if_sheet_exists="replace") as writer:
+                            df_up.to_excel(writer, sheet_name="Noticias", index=False)
+                    else:
+                        nueva_noticia.to_excel(EXCEL_FILE, sheet_name="Noticias", index=False)
+                    st.success("¡Gracias por tu colaboración! El equipo editorial revisará tu aporte.")
+                except Exception as e:
+                    st.error(f"Error al enviar la colaboración: {e}")
+
+# 5. ADMINISTRACIÓN
+elif opcion == "Administración":
+    st.title("⚙️ Panel de Administración")
+    
+    password = st.text_input("Ingrese la clave de administrador:", type="password")
+    
+    if password == CLAVE_ADMIN:
+        st.success("Acceso concedido.")
+        st.subheader("📌 Gestión de Noticia y Avisos")
+        
+        # Formulario para publicar directamente una nueva noticia/aviso
+        st.markdown("#### Publicar Nueva Noticia o Aviso")
+        with st.form("form_admin_noticia"):
+            titulo_admin = st.text_input("Título de la noticia/aviso")
+            contenido_admin = st.text_area("Contenido de la publicación")
+            publicar_btn = st.form_submit_button("Publicar Ahora")
+            
+            if publicar_btn:
+                if titulo_admin.strip() and contenido_admin.strip():
+                    nueva_pub = pd.DataFrame([{
+                        "Fecha": datetime.now().strftime("%Y-%m-%d %H:%M"),
+                        "Título": titulo_admin,
+                        "Contenido": contenido_admin,
+                        "Contacto": "Administración",
+                        "Estado": "Aprobado"
+                    }])
+                    try:
+                        if os.path.exists(EXCEL_FILE):
+                            excel_obj = pd.ExcelFile(EXCEL_FILE)
+                            if "Noticias" in excel_obj.sheet_names:
+                                df_ex = pd.read_excel(EXCEL_FILE, sheet_name="Noticias")
+                                df_up = pd.concat([df_ex, nueva_pub], ignore_index=True)
+                            else:
+                                df_up = nueva_pub
+                            with pd.ExcelWriter(EXCEL_FILE, engine="openpyxl", mode="a", if_sheet_exists="replace") as writer:
+                                df_up.to_excel(writer, sheet_name="Noticias", index=False)
+                        else:
+                            nueva_pub.to_excel(EXCEL_FILE, sheet_name="Noticias", index=False)
+                        st.success("¡Publicación guardada y aprobada exitosamente!")
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Error al guardar: {e}")
+                else:
+                    st.error("Por favor complete título y contenido.")
+                    
+        st.markdown("---")
+        st.markdown("#### Revisar y Aprobar Colaboraciones Pendientes")
+        if os.path.exists(EXCEL_FILE):
+            try:
+                excel_obj = pd.ExcelFile(EXCEL_FILE)
+                if "Noticias" in excel_obj.sheet_names:
+                    df_noticias = pd.read_excel(EXCEL_FILE, sheet_name="Noticias")
+                    if not df_noticias.empty:
+                        st.dataframe(df_noticias)
+                    else:
+                        st.info("No hay registros en la lista de noticias.")
+            except Exception as e:
+                st.error(f"Error al cargar registros: {e}")
+    elif password != "":
+        st.error("Clave incorrecta. Intente nuevamente.")
