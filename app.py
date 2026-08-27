@@ -18,7 +18,6 @@ CLAVE_ADMIN = "1234"  # Clave de administración
 # FUNCIONES AUXILIARES: BANNER O ENCABEZADO
 # ---------------------------------------------------------
 def mostrar_banner():
-    # Carga directamente la imagen del banner
     posibles_nombres = ["banner.jpeg", "banner.jpg", "banner.png", "encabezado.png", "encabezado.jpg"]
     for nombre in posibles_nombres:
         if os.path.exists(nombre):
@@ -249,7 +248,8 @@ elif opcion == "Administración":
         st.success("Acceso concedido.")
         st.subheader("📌 Gestión de Noticias y Avisos")
         
-        st.markdown("#### Publicar Nueva Noticia o Aviso")
+        # Publicación directa desde administración
+        st.markdown("#### Publicar Nueva Noticia o Aviso Directo")
         with st.form("form_admin_noticia"):
             titulo_admin = st.text_input("Título de la noticia/aviso")
             contenido_admin = st.text_area("Contenido de la publicación")
@@ -284,17 +284,49 @@ elif opcion == "Administración":
                     st.error("Por favor complete título y contenido.")
                     
         st.markdown("---")
-        st.markdown("#### Revisar y Aprobar Colaboraciones Pendientes")
+        st.markdown("#### Revisar y Gestionar Publicaciones Pendientes y Existentes")
+        
         if os.path.exists(EXCEL_FILE):
             try:
                 excel_obj = pd.ExcelFile(EXCEL_FILE)
                 if "Noticias" in excel_obj.sheet_names:
                     df_noticias = pd.read_excel(EXCEL_FILE, sheet_name="Noticias")
+                    
                     if not df_noticias.empty:
-                        st.dataframe(df_noticias)
+                        df_noticias.columns = [str(col).strip().capitalize() for col in df_noticias.columns]
+                        
+                        # Iterar por cada fila para poner botones individuales
+                        for idx, row in df_noticias.iterrows():
+                            col_info, col_btn1, col_btn2 = st.columns([3, 1, 1])
+                            
+                            titulo = row.get("Título", row.get("Titulo", "Sin título"))
+                            estado = row.get("Estado", "Pendiente")
+                            contacto = row.get("Contacto", "N/A")
+                            
+                            with col_info:
+                                st.write(f"**{titulo}** | *Contacto:* {contacto} | *Estado actual:* **{estado}**")
+                                st.caption(row.get("Contenido", "")[:100] + "...")
+                            
+                            with col_btn1:
+                                if st.button("✅ Aprobar", key=f"aprobar_{idx}"):
+                                    df_noticias.at[idx, "Estado"] = "Aprobado"
+                                    with pd.ExcelWriter(EXCEL_FILE, engine="openpyxl", mode="a", if_sheet_exists="replace") as writer:
+                                        df_noticias.to_excel(writer, sheet_name="Noticias", index=False)
+                                    st.success(f"Aprobado: {titulo}")
+                                    st.rerun()
+                                    
+                            with col_btn2:
+                                if st.button("❌ Descartar", key=f"descartar_{idx}"):
+                                    df_noticias.at[idx, "Estado"] = "Rechazado"
+                                    with pd.ExcelWriter(EXCEL_FILE, engine="openpyxl", mode="a", if_sheet_exists="replace") as writer:
+                                        df_noticias.to_excel(writer, sheet_name="Noticias", index=False)
+                                    st.warning(f"Descartado: {titulo}")
+                                    st.rerun()
+                                    
+                            st.markdown("---")
                     else:
-                        st.info("No hay registros en la lista de noticias.")
+                        st.info("No hay publicaciones en la base de datos.")
             except Exception as e:
-                st.error(f"Error al cargar registros: {e}")
+                st.error(f"Error al cargar la lista: {e}")
     elif password != "":
         st.error("Clave incorrecta. Intente nuevamente.")
