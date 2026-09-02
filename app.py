@@ -12,7 +12,7 @@ st.set_page_config(
 
 EXCEL_FILE = "datos_periodico.xlsx"
 VISITAS_FILE = "visitas.txt"
-CLAVE_ADMIN = "bosque2026"  # Clave de administración
+CLAVE_ADMIN = "1234"  # Clave de administración
 
 # ---------------------------------------------------------
 # FUNCIONES AUXILIARES: BANNER O ENCABEZADO
@@ -166,10 +166,16 @@ if opcion == "Inicio":
                             titulo = row.get("Título", row.get("Titulo", "Aviso Comunitario"))
                             contenido = row.get("Contenido", row.get("Detalle", row.get("Texto", "")))
                             fecha = row.get("Fecha", "")
+                            imagen_path = row.get("Imagen", "")
 
                             st.subheader(titulo)
                             if pd.notna(fecha) and str(fecha).strip() != "":
                                 st.caption(f"📅 Publicado el {fecha}")
+                            
+                            # Si la noticia tiene imagen asociada y existe, la muestra
+                            if pd.notna(imagen_path) and str(imagen_path).strip() != "" and os.path.exists(str(imagen_path)):
+                                st.image(str(imagen_path), use_container_width=True)
+                                
                             st.write(contenido)
                             st.markdown("---")
         except Exception as e:
@@ -214,12 +220,19 @@ elif opcion == "Participa":
             if not nombre_p.strip() or not mensaje_p.strip():
                 st.error("Por favor completa tu nombre y el mensaje.")
             else:
+                imagen_nombre = ""
+                if archivo_p is not None:
+                    imagen_nombre = f"img_{int(datetime.now().timestamp())}.jpg"
+                    with open(imagen_nombre, "wb") as f:
+                        f.write(archivo_p.getbuffer())
+
                 nueva_noticia = pd.DataFrame([{
                     "Fecha": datetime.now().strftime("%Y-%m-%d %H:%M"),
                     "Título": f"Aporte de {nombre_p}",
                     "Contenido": mensaje_p,
                     "Contacto": correo_p,
-                    "Estado": "Pendiente"
+                    "Estado": "Pendiente",
+                    "Imagen": imagen_nombre
                 }])
                 
                 try:
@@ -248,21 +261,30 @@ elif opcion == "Administración":
         st.success("Acceso concedido.")
         st.subheader("📌 Gestión de Noticias y Avisos")
         
-        # Publicación directa desde administración
+        # Publicación directa desde administración con cargador de imagen
         st.markdown("#### Publicar Nueva Noticia o Aviso Directo")
         with st.form("form_admin_noticia"):
             titulo_admin = st.text_input("Título de la noticia/aviso")
-            contenido_admin = st.text_area("Contenido de la publicación")
+            contenido_admin = st.text_area("Contenido de la publicación (copiar de Word)")
+            imagen_admin = st.file_uploader("Adjuntar imagen para la noticia (opcional)", type=["png", "jpg", "jpeg"])
             publicar_btn = st.form_submit_button("Publicar Ahora")
             
             if publicar_btn:
                 if titulo_admin.strip() and contenido_admin.strip():
+                    ruta_imagen = ""
+                    if imagen_admin is not None:
+                        # Guardar imagen localmente con un nombre único
+                        ruta_imagen = f"noticia_{int(datetime.now().timestamp())}.jpg"
+                        with open(ruta_imagen, "wb") as f:
+                            f.write(imagen_admin.getbuffer())
+
                     nueva_pub = pd.DataFrame([{
                         "Fecha": datetime.now().strftime("%Y-%m-%d %H:%M"),
                         "Título": titulo_admin,
                         "Contenido": contenido_admin,
                         "Contacto": "Administración",
-                        "Estado": "Aprobado"
+                        "Estado": "Aprobado",
+                        "Imagen": ruta_imagen
                     }])
                     try:
                         if os.path.exists(EXCEL_FILE):
@@ -276,7 +298,7 @@ elif opcion == "Administración":
                                 df_up.to_excel(writer, sheet_name="Noticias", index=False)
                         else:
                             nueva_pub.to_excel(EXCEL_FILE, sheet_name="Noticias", index=False)
-                        st.success("¡Publicación guardada y aprobada exitosamente!")
+                        st.success("¡Publicación con imagen guardada exitosamente!")
                         st.rerun()
                     except Exception as e:
                         st.error(f"Error al guardar: {e}")
@@ -295,7 +317,6 @@ elif opcion == "Administración":
                     if not df_noticias.empty:
                         df_noticias.columns = [str(col).strip().capitalize() for col in df_noticias.columns]
                         
-                        # Iterar por cada fila para poner botones individuales
                         for idx, row in df_noticias.iterrows():
                             col_info, col_btn1, col_btn2 = st.columns([3, 1, 1])
                             
@@ -305,7 +326,7 @@ elif opcion == "Administración":
                             
                             with col_info:
                                 st.write(f"**{titulo}** | *Contacto:* {contacto} | *Estado actual:* **{estado}**")
-                                st.caption(row.get("Contenido", "")[:100] + "...")
+                                st.caption(str(row.get("Contenido", ""))[:100] + "...")
                             
                             with col_btn1:
                                 if st.button("✅ Aprobar", key=f"aprobar_{idx}"):
