@@ -12,7 +12,7 @@ st.set_page_config(
 
 EXCEL_FILE = "datos_periodico.xlsx"
 VISITAS_FILE = "visitas.txt"
-CLAVE_ADMIN = "1234"  # Clave de administración
+CLAVE_ADMIN = "bosque2026"  # Clave de administración
 
 # ---------------------------------------------------------
 # FUNCIONES AUXILIARES: BANNER O ENCABEZADO
