@@ -12,7 +12,7 @@ st.set_page_config(
 
 EXCEL_FILE = "datos_periodico.xlsx"
 VISITAS_FILE = "visitas.txt"
-CLAVE_ADMIN = "1234"  # Reemplace aquí con su clave personal
+CLAVE_ADMIN = "bosque2026"  # Reemplace aquí con su clave personal
 
 # Estilos CSS institucionales (Paleta de colores del manual)
 st.markdown("""
