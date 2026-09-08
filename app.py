@@ -13,7 +13,7 @@ st.set_page_config(
 EXCEL_FILE = "datos_periodico.xlsx"
 VISITAS_FILE = "visitas.txt"
 FRASE_FILE = "frase_dia.txt"
-CLAVE_ADMIN = "1234"  # Reemplace aquí con su clave personal
+CLAVE_ADMIN = "bosque2026"  # Reemplace aquí con su clave personal
 
 # Estilos CSS institucionales y animación de texto en movimiento
 st.markdown("""
