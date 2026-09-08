@@ -12,9 +12,10 @@ st.set_page_config(
 
 EXCEL_FILE = "datos_periodico.xlsx"
 VISITAS_FILE = "visitas.txt"
-CLAVE_ADMIN = "bosque2026"  # Reemplace aquí con su clave personal
+FRASE_FILE = "frase_dia.txt"
+CLAVE_ADMIN = "1234"  # Reemplace aquí con su clave personal
 
-# Estilos CSS institucionales (Paleta de colores del manual)
+# Estilos CSS institucionales y animación de texto en movimiento
 st.markdown("""
 <style>
     /* Colores institucionales */
@@ -35,7 +36,7 @@ st.markdown("""
     .franja-marca {
         height: 6px;
         background: linear-gradient(90deg, #2E7D32 50%, #F9C00D 75%, #E53935 100%);
-        margin-bottom: 20px;
+        margin-bottom: 15px;
         border-radius: 3px;
     }
 
@@ -47,11 +48,38 @@ st.markdown("""
         margin-top: -10px;
         margin-bottom: 20px;
     }
+
+    /* Estilo y Animación de la Cinta de Texto Desplazable */
+    .cinta-contenedor {
+        width: 100%;
+        background-color: #2E7D32;
+        color: #FFFFFF;
+        overflow: hidden;
+        white-space: nowrap;
+        box-sizing: border-box;
+        padding: 10px 0;
+        border-radius: 6px;
+        margin-bottom: 25px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .cinta-texto {
+        display: inline-block;
+        padding-left: 100%;
+        animation: moverTexto 20s linear infinite;
+        font-weight: 600;
+        font-size: 1.1rem;
+    }
+
+    @keyframes moverTexto {
+        0%   { transform: translate(0, 0); }
+        100% { transform: translate(-100%, 0); }
+    }
 </style>
 """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# FUNCIONES AUXILIARES: BANNER O ENCABEZADO
+# FUNCIONES AUXILIARES: BANNER Y FRASE DEL DÍA
 # ---------------------------------------------------------
 def mostrar_banner():
     st.markdown('<div class="franja-marca"></div>', unsafe_allow_html=True)
@@ -65,6 +93,21 @@ def mostrar_banner():
     if not encontrado:
         st.markdown("<h1 style='text-align: center;'>LA VOZ QUE UNE</h1>", unsafe_allow_html=True)
         st.markdown("<p class='eslogan-comunidad' style='text-align: center;'>Construyendo comunidad organizada, comprometida y solidaria</p>", unsafe_allow_html=True)
+
+def mostrar_frase_desplazable():
+    if os.path.exists(FRASE_FILE):
+        with open(FRASE_FILE, "r", encoding="utf-8") as f:
+            frase = f.read().strip()
+        if frase:
+            st.markdown(f'''
+            <div class="cinta-contenedor">
+                <div class="cinta-texto">📢 {frase}</div>
+            </div>
+            ''', unsafe_allow_html=True)
+
+def guardar_frase_dia(nueva_frase):
+    with open(FRASE_FILE, "w", encoding="utf-8") as f:
+        f.write(nueva_frase.strip())
 
 # ---------------------------------------------------------
 # FUNCIONES AUXILIARES: CONTADOR DE VISITAS
@@ -185,6 +228,8 @@ st.sidebar.caption("— Periódico La Voz que Une —")
 # 1. INICIO
 if opcion == "Inicio":
     mostrar_banner()
+    mostrar_frase_desplazable()  # <--- Cinta con texto en movimiento debajo del banner
+    
     st.title("📰 La Voz que Une - Edición Digital")
     st.markdown("<p class='eslogan-comunidad'>Construyendo comunidad organizada, comprometida y solidaria</p>", unsafe_allow_html=True)
     st.write("Bienvenidos al espacio informativo y comunitario. Aquí compartimos las últimas novedades y noticias de nuestra comunidad.")
@@ -228,6 +273,7 @@ if opcion == "Inicio":
 # 2. HISTORIA
 elif opcion == "Historia":
     mostrar_banner()
+    mostrar_frase_desplazable()
     st.title("📜 Nuestra Historia")
     st.write("Un recorrido por la memoria histórica, el patrimonio y los hitos que han marcado el desarrollo de nuestro entorno y su gente.")
     
@@ -240,6 +286,7 @@ elif opcion == "Historia":
 # 3. GALERÍA
 elif opcion == "Galería":
     mostrar_banner()
+    mostrar_frase_desplazable()
     st.title("🖼️ Galería Comunitaria")
     st.write("Registros visuales, fotografías patrimoniales y actividades destacadas de la comunidad.")
     
@@ -248,6 +295,7 @@ elif opcion == "Galería":
 # 4. PARTICIPA
 elif opcion == "Participa":
     mostrar_banner()
+    mostrar_frase_desplazable()
     st.title("🤝 Participa y Envía tu Nota")
     st.write("Este periódico lo hacemos entre todos. Déjanos tu propuesta de noticia, opinión o fotografía.")
     
@@ -301,6 +349,23 @@ elif opcion == "Administración":
     
     if password == CLAVE_ADMIN:
         st.success("Acceso concedido.")
+        
+        # --- NUEVA SECCIÓN: CAMBIAR LA FRASE O AVISO DEL DÍA ---
+        st.subheader("💬 Frase o Aviso Desplazable del Día")
+        frase_actual = ""
+        if os.path.exists(FRASE_FILE):
+            with open(FRASE_FILE, "r", encoding="utf-8") as f:
+                frase_actual = f.read().strip()
+
+        with st.form("form_frase_dia"):
+            nueva_frase_input = st.text_input("Escriba el aviso o frase que se desplazará en la portada:", value=frase_actual)
+            guardar_frase_btn = st.form_submit_button("Actualizar Frase del Día")
+            if guardar_frase_btn:
+                guardar_frase_dia(nueva_frase_input)
+                st.success("¡Frase del día actualizada correctamente!")
+                st.rerun()
+
+        st.markdown("---")
         st.subheader("📌 Gestión de Noticias y Avisos")
         
         st.markdown("#### Publicar Nueva Noticia o Aviso Directo")
