@@ -12,17 +12,59 @@ st.set_page_config(
 
 EXCEL_FILE = "datos_periodico.xlsx"
 VISITAS_FILE = "visitas.txt"
-CLAVE_ADMIN = "bosque2026"  # Clave de administración
+CLAVE_ADMIN = "1234"  # Reemplace aquí con su clave personal
+
+# Estilos CSS institucionales (Paleta de colores del manual)
+st.markdown("""
+<style>
+    /* Colores institucionales */
+    :root {
+        --verde-principal: #2E7D32;
+        --amarillo-marca: #F9C00D;
+        --rojo-marca: #E53935;
+        --texto-oscuro: #333333;
+    }
+    
+    /* Encabezados y títulos principales */
+    h1, h2, h3 {
+        color: #2E7D32 !important;
+        font-family: 'Montserrat', 'Arial', sans-serif;
+    }
+    
+    /* Franja decorativa superior */
+    .franja-marca {
+        height: 6px;
+        background: linear-gradient(90deg, #2E7D32 50%, #F9C00D 75%, #E53935 100%);
+        margin-bottom: 20px;
+        border-radius: 3px;
+    }
+
+    /* Eslogan destacado */
+    .eslogan-comunidad {
+        color: #2E7D32;
+        font-size: 1.25rem;
+        font-weight: 700;
+        margin-top: -10px;
+        margin-bottom: 20px;
+    }
+</style>
+""", unsafe_allow_html=True)
 
 # ---------------------------------------------------------
 # FUNCIONES AUXILIARES: BANNER O ENCABEZADO
 # ---------------------------------------------------------
 def mostrar_banner():
+    st.markdown('<div class="franja-marca"></div>', unsafe_allow_html=True)
     posibles_nombres = ["banner.jpeg", "banner.jpg", "banner.png", "encabezado.png", "encabezado.jpg"]
+    encontrado = False
     for nombre in posibles_nombres:
         if os.path.exists(nombre):
             st.image(nombre, use_container_width=True)
+            encontrado = True
             break
+    if not encontrado:
+        st.markdown("<h1 style='text-align: center;'>LA VOZ QUE UNE</h1>", unsafe_allow_html=True)
+        st.markdown("<p class='eslogan-comunidad' style='text-align: center;'>Construyendo comunidad organizada, comprometida y solidaria</p>", unsafe_allow_html=True)
 
 # ---------------------------------------------------------
 # FUNCIONES AUXILIARES: CONTADOR DE VISITAS
@@ -123,7 +165,7 @@ def mostrar_seccion_comentarios(seccion):
 # BARRA LATERAL (MENÚ Y CONTADOR)
 # ---------------------------------------------------------
 st.sidebar.title("La Voz que Une")
-st.sidebar.markdown("Periódico Comunitario digital")
+st.sidebar.markdown("**Construyendo comunidad organizada, comprometida y solidaria**")
 
 opcion = st.sidebar.radio(
     "Navegación:",
@@ -144,6 +186,7 @@ st.sidebar.caption("— Periódico La Voz que Une —")
 if opcion == "Inicio":
     mostrar_banner()
     st.title("📰 La Voz que Une - Edición Digital")
+    st.markdown("<p class='eslogan-comunidad'>Construyendo comunidad organizada, comprometida y solidaria</p>", unsafe_allow_html=True)
     st.write("Bienvenidos al espacio informativo y comunitario. Aquí compartimos las últimas novedades y noticias de nuestra comunidad.")
     
     if os.path.exists(EXCEL_FILE):
@@ -172,7 +215,6 @@ if opcion == "Inicio":
                             if pd.notna(fecha) and str(fecha).strip() != "":
                                 st.caption(f"📅 Publicado el {fecha}")
                             
-                            # Si la noticia tiene imagen asociada y existe, la muestra
                             if pd.notna(imagen_path) and str(imagen_path).strip() != "" and os.path.exists(str(imagen_path)):
                                 st.image(str(imagen_path), use_container_width=True)
                                 
@@ -261,7 +303,6 @@ elif opcion == "Administración":
         st.success("Acceso concedido.")
         st.subheader("📌 Gestión de Noticias y Avisos")
         
-        # Publicación directa desde administración con cargador de imagen
         st.markdown("#### Publicar Nueva Noticia o Aviso Directo")
         with st.form("form_admin_noticia"):
             titulo_admin = st.text_input("Título de la noticia/aviso")
@@ -273,7 +314,6 @@ elif opcion == "Administración":
                 if titulo_admin.strip() and contenido_admin.strip():
                     ruta_imagen = ""
                     if imagen_admin is not None:
-                        # Guardar imagen localmente con un nombre único
                         ruta_imagen = f"noticia_{int(datetime.now().timestamp())}.jpg"
                         with open(ruta_imagen, "wb") as f:
                             f.write(imagen_admin.getbuffer())
@@ -298,7 +338,7 @@ elif opcion == "Administración":
                                 df_up.to_excel(writer, sheet_name="Noticias", index=False)
                         else:
                             nueva_pub.to_excel(EXCEL_FILE, sheet_name="Noticias", index=False)
-                        st.success("¡Publicación con imagen guardada exitosamente!")
+                        st.success("¡Publicación guardada exitosamente!")
                         st.rerun()
                     except Exception as e:
                         st.error(f"Error al guardar: {e}")
