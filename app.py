@@ -456,3 +456,4 @@ elif opcion == "Administración":
                 st.error(f"Error al cargar la lista: {e}")
     elif password != "":
         st.error("Clave incorrecta. Intente nuevamente.")
+        
