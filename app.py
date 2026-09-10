@@ -63,8 +63,9 @@ st.markdown("""
     .marquee-text {
         display: inline-block;
         padding-left: 100%;
-        animation: marquee 20s linear infinite;
+        animation: marquee 22s linear infinite;
         font-weight: 500;
+        font-size: 1.05rem;
     }
     @keyframes marquee {
         0%   { transform: translate(0, 0); }
@@ -76,6 +77,7 @@ st.markdown("""
 # Clave de administración
 CLAVE_ADMIN = "bosque2026"
 ARCHIVO_DATOS = "datos_periodico.xlsx"
+ARCHIVO_MARQUEE = "aviso_marquee.txt"
 
 # ==========================================
 # FUNCIONES PARA GESTIÓN DE DATOS
@@ -111,10 +113,29 @@ def cargar_datos():
 def guardar_datos(df):
     df.to_excel(ARCHIVO_DATOS, index=False)
 
+def cargar_aviso_marquee():
+    if os.path.exists(ARCHIVO_MARQUEE):
+        try:
+            with open(ARCHIVO_MARQUEE, "r", encoding="utf-8") as f:
+                texto = f.read().strip()
+                if texto:
+                    return texto
+        except Exception:
+            pass
+    return "Bienvenido a La Voz que Une — Periódico digital comunitario — Manténgase informado de las últimas noticias"
+
+def guardar_aviso_marquee(texto):
+    with open(ARCHIVO_MARQUEE, "w", encoding="utf-8") as f:
+        f.write(texto)
+
+# Inicializar sesión
 if 'noticias' not in st.session_state:
     st.session_state.noticias = cargar_datos()
 
-# Asegurar siempre que el DataFrame contenga todas las columnas requeridas
+if 'aviso_texto' not in st.session_state:
+    st.session_state.aviso_texto = cargar_aviso_marquee()
+
+# Asegurar columnas necesarias
 for col_req in ["Fecha", "Título", "Categoría", "Contenido", "Imagen_URL"]:
     if col_req not in st.session_state.noticias.columns:
         st.session_state.noticias[col_req] = ""
@@ -127,10 +148,9 @@ st.markdown('<h1 class="main-title">LA VOZ QUE UNE</h1>', unsafe_allow_html=True
 st.markdown('<p class="sub-title">Diario Comunitario e Informativo</p>', unsafe_allow_html=True)
 
 # Cinta de aviso desplazable
-aviso_texto = "Bienvenido a La Voz que Une — Periódico digital comunitario — Manténgase informado de las últimas noticias"
 st.markdown(f'''
     <div class="marquee-container">
-        <div class="marquee-text">{aviso_texto}</div>
+        <div class="marquee-text">{st.session_state.aviso_texto}</div>
     </div>
 ''', unsafe_allow_html=True)
 
@@ -245,7 +265,20 @@ with tab_admin:
     if password == CLAVE_ADMIN:
         st.success("Acceso concedido como Administrador.")
         
-        st.subheader("Publicar Nueva Noticia")
+        # SECCIÓN A: EDITAR CINTA DESLIZANTE
+        st.markdown("---")
+        st.subheader("📢 Actualizar Cinta de Noticias Desplazables (Titular del Día)")
+        nuevo_aviso = st.text_input("Texto para la cinta de aviso:", value=st.session_state.aviso_texto)
+        if st.button("Actualizar Cinta de Texto"):
+            if nuevo_aviso.strip() != "":
+                st.session_state.aviso_texto = nuevo_aviso.strip()
+                guardar_aviso_marquee(nuevo_aviso.strip())
+                st.success("¡Cinta de noticias actualizada con éxito!")
+                st.rerun()
+
+        # SECCIÓN B: PUBLICAR NOTICIA COMPLETA
+        st.markdown("---")
+        st.subheader("📝 Publicar Nueva Noticia")
         with st.form("form_nueva_noticia", clear_on_submit=True):
             titulo = st.text_input("Título del Artículo")
             categoria = st.selectbox("Categoría", ["Comunidad", "Educación", "Cultura", "Editorial", "Declaraciones", "General"])
