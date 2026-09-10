@@ -114,6 +114,11 @@ def guardar_datos(df):
 if 'noticias' not in st.session_state:
     st.session_state.noticias = cargar_datos()
 
+# Asegurar siempre que el DataFrame contenga todas las columnas requeridas
+for col_req in ["Fecha", "Título", "Categoría", "Contenido", "Imagen_URL"]:
+    if col_req not in st.session_state.noticias.columns:
+        st.session_state.noticias[col_req] = ""
+
 # ==========================================
 # ENCABEZADO PRINCIPAL
 # ==========================================
@@ -176,7 +181,10 @@ with tab_editorial:
     st.write("Espacio dedicado a la reflexión, el análisis social y las columnas editoriales del periódico.")
     
     df_noticias = st.session_state.noticias
-    df_filtered = df_noticias[df_noticias["Categoría"].isin(["Editorial", "Declaraciones"])] if not df_noticias.empty else pd.DataFrame()
+    if not df_noticias.empty and "Categoría" in df_noticias.columns:
+        df_filtered = df_noticias[df_noticias["Categoría"].isin(["Editorial", "Declaraciones"])]
+    else:
+        df_filtered = pd.DataFrame()
     
     if df_filtered.empty:
         st.info("No hay editoriales o columnas de opinión publicadas recientemente.")
@@ -196,7 +204,10 @@ with tab_cultura:
     st.write("Noticias, eventos locales, expresiones artísticas y proyectos comunitarios.")
     
     df_noticias = st.session_state.noticias
-    df_filtered = df_noticias[df_noticias["Categoría"].isin(["Cultura", "Comunidad", "Educación"])] if not df_noticias.empty else pd.DataFrame()
+    if not df_noticias.empty and "Categoría" in df_noticias.columns:
+        df_filtered = df_noticias[df_noticias["Categoría"].isin(["Cultura", "Comunidad", "Educación"])]
+    else:
+        df_filtered = pd.DataFrame()
     
     if df_filtered.empty:
         st.info("No hay notas de cultura o comunidad publicadas en este momento.")
