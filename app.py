@@ -39,7 +39,7 @@ st.markdown("""
         margin-bottom: 25px;
     }
 
-    /* Targetas de Noticias */
+    /* Tarjetas de Noticias */
     .news-card {
         background-color: #F9F9F9;
         border-left: 5px solid #2E7D32;
@@ -81,12 +81,34 @@ ARCHIVO_DATOS = "datos_periodico.xlsx"
 # FUNCIONES PARA GESTIÓN DE DATOS
 # ==========================================
 def cargar_datos():
+    columnas_estandar = ["Fecha", "Título", "Categoría", "Contenido", "Imagen_URL"]
     if os.path.exists(ARCHIVO_DATOS):
         try:
-            return pd.read_excel(ARCHIVO_DATOS)
+            df = pd.read_excel(ARCHIVO_DATOS)
+            # Normalizar nombres de columnas si vienen en minúsculas
+            mapeo = {}
+            for col in df.columns:
+                col_lower = str(col).strip().lower()
+                if "tit" in col_lower:
+                    mapeo[col] = "Título"
+                elif "cat" in col_lower:
+                    mapeo[col] = "Categoría"
+                elif "cont" in col_lower:
+                    mapeo[col] = "Contenido"
+                elif "fec" in col_lower:
+                    mapeo[col] = "Fecha"
+                elif "img" in col_lower or "imagen" in col_lower:
+                    mapeo[col] = "Imagen_URL"
+            df = df.rename(columns=mapeo)
+            
+            # Asegurar que existan todas las columnas
+            for c in columnas_estandar:
+                if c not in df.columns:
+                    df[c] = ""
+            return df[columnas_estandar]
         except Exception:
             pass
-    return pd.DataFrame(columns=["Fecha", "Título", "Categoría", "Contenido", "Imagen_URL"])
+    return pd.DataFrame(columns=columnas_estandar)
 
 def guardar_datos(df):
     df.to_excel(ARCHIVO_DATOS, index=False)
@@ -126,14 +148,20 @@ with tab_inicio:
     else:
         for idx, row in df_noticias.iloc[::-1].iterrows():
             st.markdown('<div class="news-card">', unsafe_allow_html=True)
-            st.subheader(row["Título"])
-            st.caption(f"📅 Publicado el: {row['Fecha']} | Categoría: {row['Categoría']}")
             
-            if pd.notna(row["Imagen_URL"]) and str(row["Imagen_URL"]).strip() != "":
-                st.image(row["Imagen_URL"], use_container_width=True)
+            titulo_val = row.get("Título", "Sin título")
+            fecha_val = row.get("Fecha", "")
+            cat_val = row.get("Categoría", "General")
+            img_val = row.get("Imagen_URL", "")
+            cont_val = row.get("Contenido", "")
+
+            st.subheader(titulo_val)
+            st.caption(f"📅 Publicado el: {fecha_val} | Categoría: {cat_val}")
             
-            # Mantiene saltos de línea e imparte formato limpio
-            contenido_formateado = str(row["Contenido"]).replace("\n", "\n\n")
+            if pd.notna(img_val) and str(img_val).strip() != "":
+                st.image(str(img_val), use_container_width=True)
+            
+            contenido_formateado = str(cont_val).replace("\n", "\n\n")
             st.markdown(contenido_formateado)
             st.markdown('</div>', unsafe_allow_html=True)
 
