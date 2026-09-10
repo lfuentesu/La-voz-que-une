@@ -85,7 +85,6 @@ def cargar_datos():
     if os.path.exists(ARCHIVO_DATOS):
         try:
             df = pd.read_excel(ARCHIVO_DATOS)
-            # Normalizar nombres de columnas si vienen en minúsculas
             mapeo = {}
             for col in df.columns:
                 col_lower = str(col).strip().lower()
@@ -101,7 +100,6 @@ def cargar_datos():
                     mapeo[col] = "Imagen_URL"
             df = df.rename(columns=mapeo)
             
-            # Asegurar que existan todas las columnas
             for c in columnas_estandar:
                 if c not in df.columns:
                     df[c] = ""
@@ -113,7 +111,6 @@ def cargar_datos():
 def guardar_datos(df):
     df.to_excel(ARCHIVO_DATOS, index=False)
 
-# Inicializar datos en sesión
 if 'noticias' not in st.session_state:
     st.session_state.noticias = cargar_datos()
 
@@ -133,12 +130,18 @@ st.markdown(f'''
 ''', unsafe_allow_html=True)
 
 # ==========================================
-# NAVEGACIÓN Y PESTAÑAS
+# NAVEGACIÓN Y SECCIONES (PESTAÑAS)
 # ==========================================
-tab_inicio, tab_admin = st.tabs(["📖 Portada / Noticias", "🔐 Administración"])
+tab_inicio, tab_editorial, tab_cultura, tab_nosotros, tab_admin = st.tabs([
+    "📖 Portada / Noticias", 
+    "🏛️ Editorial y Opinión", 
+    "🎭 Cultura y Comunidad", 
+    "📞 Nosotros / Contacto", 
+    "🔐 Administración"
+])
 
 # ------------------------------------------
-# PESTAÑA 1: PORTADA
+# PESTAÑA 1: PORTADA / NOTICIAS
 # ------------------------------------------
 with tab_inicio:
     df_noticias = st.session_state.noticias
@@ -166,7 +169,62 @@ with tab_inicio:
             st.markdown('</div>', unsafe_allow_html=True)
 
 # ------------------------------------------
-# PESTAÑA 2: ADMINISTRACIÓN
+# PESTAÑA 2: EDITORIAL Y OPINIÓN
+# ------------------------------------------
+with tab_editorial:
+    st.header("Editorial y Columnas de Opinión")
+    st.write("Espacio dedicado a la reflexión, el análisis social y las columnas editoriales del periódico.")
+    
+    df_noticias = st.session_state.noticias
+    df_filtered = df_noticias[df_noticias["Categoría"].isin(["Editorial", "Declaraciones"])] if not df_noticias.empty else pd.DataFrame()
+    
+    if df_filtered.empty:
+        st.info("No hay editoriales o columnas de opinión publicadas recientemente.")
+    else:
+        for idx, row in df_filtered.iloc[::-1].iterrows():
+            st.markdown('<div class="news-card">', unsafe_allow_html=True)
+            st.subheader(row.get("Título", ""))
+            st.caption(f"📅 {row.get('Fecha', '')}")
+            st.markdown(str(row.get("Contenido", "")).replace("\n", "\n\n"))
+            st.markdown('</div>', unsafe_allow_html=True)
+
+# ------------------------------------------
+# PESTAÑA 3: CULTURA Y COMUNIDAD
+# ------------------------------------------
+with tab_cultura:
+    st.header("Cultura y Vida Comunitaria")
+    st.write("Noticias, eventos locales, expresiones artísticas y proyectos comunitarios.")
+    
+    df_noticias = st.session_state.noticias
+    df_filtered = df_noticias[df_noticias["Categoría"].isin(["Cultura", "Comunidad", "Educación"])] if not df_noticias.empty else pd.DataFrame()
+    
+    if df_filtered.empty:
+        st.info("No hay notas de cultura o comunidad publicadas en este momento.")
+    else:
+        for idx, row in df_filtered.iloc[::-1].iterrows():
+            st.markdown('<div class="news-card">', unsafe_allow_html=True)
+            st.subheader(row.get("Título", ""))
+            st.caption(f"📅 {row.get('Fecha', '')} | Categoría: {row.get('Categoría', '')}")
+            if pd.notna(row.get("Imagen_URL", "")) and str(row.get("Imagen_URL")).strip() != "":
+                st.image(str(row.get("Imagen_URL")), use_container_width=True)
+            st.markdown(str(row.get("Contenido", "")).replace("\n", "\n\n"))
+            st.markdown('</div>', unsafe_allow_html=True)
+
+# ------------------------------------------
+# PESTAÑA 4: NOSOTROS Y CONTACTO
+# ------------------------------------------
+with tab_nosotros:
+    st.header("Acerca de La Voz que Une")
+    st.markdown("""
+    **La Voz que Une** es una iniciativa de difusión comunitaria e informativa dedicada a compartir acontecimientos, cultura y proyectos de interés para la ciudadanía.
+    
+    ---
+    ### 📩 Contacto
+    Si desea enviar un comunicado, sugerencia o artículo para su evaluación, puede ponerse en contacto con el equipo editorial.
+    """)
+
+# ------------------------------------------
+# PESTAÑA 5: ADMINISTRACIÓN
 # ------------------------------------------
 with tab_admin:
     st.header("Panel de Control Editorial")
@@ -179,7 +237,7 @@ with tab_admin:
         st.subheader("Publicar Nueva Noticia")
         with st.form("form_nueva_noticia", clear_on_submit=True):
             titulo = st.text_input("Título del Artículo")
-            categoria = st.selectbox("Categoría", ["Comunidad", "Educación", "Cultura", "Declaraciones", "General"])
+            categoria = st.selectbox("Categoría", ["Comunidad", "Educación", "Cultura", "Editorial", "Declaraciones", "General"])
             imagen_url = st.text_input("Ruta o enlace de la imagen (ej: nombre_imagen.jpg o URL)")
             contenido = st.text_area("Cuerpo de la noticia (Deje una línea en blanco entre párrafos):", height=200)
             
@@ -198,7 +256,7 @@ with tab_admin:
                     
                     st.session_state.noticias = pd.concat([st.session_state.noticias, nueva_fila], ignore_index=True)
                     guardar_datos(st.session_state.noticias)
-                    st.success("¡Noticia publicada con éxito! Vaya a la pestaña 'Portada / Noticias' para visualizarla.")
+                    st.success("¡Noticia publicada con éxito!")
                     st.rerun()
                 else:
                     st.warning("Por favor complete al menos el título y el contenido.")
