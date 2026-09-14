@@ -1,329 +1,153 @@
 import streamlit as st
-import pandas as pd
-import os
 
-# ---------------------------------------------------------
-# CONFIGURACIÓN DE LA PÁGINA
-# ---------------------------------------------------------
+# Configuración de la página
 st.set_page_config(
-    page_title="Periódico Digital El Bosque 1",
-    page_icon="🌳",
-    layout="wide",
-    initial_sidebar_state="expanded"
+    page_title="La Voz Que Une",
+    page_icon="📰",
+    layout="wide"
 )
 
-CLAVE_EDITORIAL = "bosque2026"
-ARCHIVO_DATOS = "datos_periodico.xlsx"
-ARCHIVO_VISITAS = "visitas.txt"
-
-# ---------------------------------------------------------
-# GESTIÓN DEL CONTADOR DE VISITAS
-# ---------------------------------------------------------
-def registrar_y_obtener_visitas():
-    if "visita_registrada" not in st.session_state:
-        st.session_state["visita_registrada"] = True
-        
-        visitas_actuales = 0
-        if os.path.exists(ARCHIVO_VISITAS):
-            try:
-                with open(ARCHIVO_VISITAS, "r") as f:
-                    visitas_actuales = int(f.read().strip())
-            except ValueError:
-                visitas_actuales = 0
-        
-        visitas_actuales += 1
-        
-        with open(ARCHIVO_VISITAS, "w") as f:
-            f.write(str(visitas_actuales))
-            
-        return visitas_actuales
-    else:
-        if os.path.exists(ARCHIVO_VISITAS):
-            try:
-                with open(ARCHIVO_VISITAS, "r") as f:
-                    return int(f.read().strip())
-            except ValueError:
-                return 1
-        return 1
-
-total_visitas = registrar_y_obtener_visitas()
-
-# ---------------------------------------------------------
-# CARGA Y LIMPIEZA DE DATOS
-# ---------------------------------------------------------
-def cargar_datos():
-    if os.path.exists(ARCHIVO_DATOS):
-        df = pd.read_excel(ARCHIVO_DATOS)
-        df.columns = [str(c).strip().lower() for c in df.columns]
-        return df
-    else:
-        return pd.DataFrame(columns=[
-            "id", "fecha", "titulo", "categoria", "contenido", 
-            "autor", "correo", "telefono", "imagen", "estado"
-        ])
-
-def guardar_datos(df):
-    df.to_excel(ARCHIVO_DATOS, index=False)
-
-df_datos = cargar_datos()
-
-columnas_requeridas = [
-    "id", "fecha", "titulo", "categoria", "contenido", 
-    "autor", "correo", "telefono", "imagen", "estado"
-]
-for col in columnas_requeridas:
-    if col not in df_datos.columns:
-        df_datos[col] = ""
-
-def obtener_texto(val, por_defecto=""):
-    if pd.isna(val) or str(val).strip().lower() in ['nan', 'none', '']:
-        return por_defecto
-    return str(val).strip()
-
-# ---------------------------------------------------------
-# BANNER Y TÍTULO PRINCIPAL
-# ---------------------------------------------------------
-for nombre_banner in ["banner.jpg", "banner.jpeg", "banner.png", "Banner.jpg"]:
-    if os.path.exists(nombre_banner):
-        st.image(nombre_banner, use_container_width=True)
-        break
-
+# --- ESTILOS CSS PERSONALIZADOS ---
 st.markdown("""
     <style>
     .main-title {
-        color: #1E5631;
         text-align: center;
-        font-size: 2.5rem;
+        color: #1E3A8A;
+        font-family: 'Helvetica Neue', sans-serif;
         font-weight: bold;
-        margin-top: 15px;
+        padding-bottom: 5px;
         margin-bottom: 0px;
     }
     .sub-title {
-        color: #333333;
         text-align: center;
-        font-size: 1.1rem;
+        color: #4B5563;
+        font-size: 1.1em;
         margin-bottom: 25px;
     }
-    .card-noticia {
-        background-color: #F4F9F4;
-        padding: 18px;
-        border-radius: 10px;
-        border-left: 5px solid #1E5631;
-        margin-bottom: 15px;
+    .stButton>button {
+        width: 100%;
+        background-color: #1E3A8A;
+        color: white;
+        border-radius: 5px;
     }
     </style>
 """, unsafe_allow_html=True)
 
-st.markdown('<div class="main-title">🌳 Periódico Digital El Bosque 1</div>', unsafe_allow_html=True)
-st.markdown('<div class="sub-title">La Voz que Une a Nuestra Comunidad • La Pincoya, Huechuraba</div>', unsafe_allow_html=True)
-
-# ---------------------------------------------------------
-# MENÚ DE NAVEGACIÓN Y CONTADOR
-# ---------------------------------------------------------
-opciones_menu = [
-    "🏠 Inicio", 
-    "📜 Memoria e Historia", 
-    "📸 Galería", 
-    "📢 Avisos Comunitarios", 
-    "✍️ Participa", 
-    "🔒 Administración"
-]
-
-pestaña = st.sidebar.radio("Navegación", opciones_menu)
-
-st.sidebar.divider()
-st.sidebar.metric(label="👀 Visitas Totales", value=f"{total_visitas:,}".replace(",", "."))
-
-# Filtrar publicaciones aprobadas
-def es_aprobado(val):
-    v = str(val).strip().lower()
-    return v in ['aprobado', 'aprobada', 'true']
-
-df_aprobados = df_datos[df_datos['estado'].apply(es_aprobado)].copy()
-
-# ---------------------------------------------------------
-# 1. PESTAÑA: INICIO
-# ---------------------------------------------------------
-if pestaña == "🏠 Inicio":
-    st.header("🏠 Noticias y Publicaciones Recientes")
-    
-    df_inicio_valido = df_aprobados[df_aprobados['titulo'].apply(lambda x: obtener_texto(x) != "") | 
-                                   df_aprobados['contenido'].apply(lambda x: obtener_texto(x) != "")]
-    
-    if df_inicio_valido.empty:
-        st.info("Aún no hay publicaciones en la portada.")
-    else:
-        for _, row in df_inicio_valido.iterrows():
-            titulo = obtener_texto(row.get('titulo'), "Sin título")
-            contenido = obtener_texto(row.get('contenido'), "")
-            autor = obtener_texto(row.get('autor'), "Vecino de El Bosque 1")
-            fecha = obtener_texto(row.get('fecha'), "")
-            categoria = obtener_texto(row.get('categoria'), "General")
-            imagen = obtener_texto(row.get('imagen'), "")
-
-            st.markdown(f"""
-            <div class="card-noticia">
-                <span style="color:#888; font-size:0.85rem;">{fecha} | Categoría: <b>{categoria}</b></span>
-                <h3 style="margin-top:5px; color:#1E5631;">{titulo}</h3>
-                <p>{contenido}</p>
-                <small><b>Por:</b> {autor}</small>
-            </div>
-            """, unsafe_allow_html=True)
+# --- INICIALIZACIÓN DEL ESTADO DE SESIÓN ---
+if "noticias" not in st.session_state:
+    st.session_state.noticias = [
+        {
+            "titulo": "Bienvenidos a La Voz Que Une",
+            "categoria": "Comunidad",
+            "bajada": "El nuevo portal digital comunitario al servicio de nuestros vecinos.",
+            "contenido": """Estamos muy felices de presentar **La Voz Que Une**, un espacio diseñado para informar, conectar y destacar las iniciativas de nuestra comunidad. 
             
-            if imagen != "":
-                st.image(imagen, use_container_width=True)
+A través de este portal, compartiremos noticias locales, eventos, historias de vecinos y toda la información relevante para nuestro entorno.""",
+            "imagen1": "https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=600",
+            "pie1": "Periodismo comunitario y participativo.",
+            "imagen2": "",
+            "pie2": ""
+        }
+    ]
+
+# --- CABECERA PRINCIPAL ---
+st.markdown("<h1 class='main-title'>📰 LA VOZ QUE UNE</h1>", unsafe_allow_html=True)
+st.markdown("<p class='sub-title'>Diario Digital Comunitario</p>", unsafe_allow_html=True)
+st.divider()
+
+# --- NAVEGACIÓN PRINCIPAL ---
+pestaña1, pestaña2 = st.tabs(["🗞️ Edición Impresa / Noticias", "⚙️ Panel de Administración"])
+
+# ==========================================
+# PESTAÑA 1: PORTADA Y NOTICIAS
+# ==========================================
+with pestaña1:
+    if not st.session_state.noticias:
+        st.info("No hay noticias publicadas en este momento.")
+    else:
+        for i, noticia in enumerate(st.session_state.noticias):
+            st.caption(f"Categoría: **{noticia['categoria']}**")
+            st.title(noticia["titulo"])
+            if noticia.get("bajada"):
+                st.subheader(noticia["bajada"])
+            
+            # --- MANEJO OPTIMIZADO DE IMÁGENES ---
+            img1 = noticia.get("imagen1", "").strip()
+            img2 = noticia.get("imagen2", "").strip()
+            
+            # CASO A: Dos imágenes (Se muestran lado a lado en 2 columnas)
+            if img1 and img2:
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.image(img1, caption=noticia.get("pie1", ""), use_container_width=True)
+                with col2:
+                    st.image(img2, caption=noticia.get("pie2", ""), use_container_width=True)
+            
+            # CASO B: Una sola imagen (Se muestra centrada y a tamaño moderado)
+            elif img1:
+                col_izq, col_centro, col_der = st.columns([1, 2, 1])
+                with col_centro:
+                    st.image(img1, caption=noticia.get("pie1", ""), use_container_width=True)
+            elif img2:
+                col_izq, col_centro, col_der = st.columns([1, 2, 1])
+                with col_centro:
+                    st.image(img2, caption=noticia.get("pie2", ""), use_container_width=True)
+
+            # Contenido del texto de la noticia
+            st.markdown(noticia["contenido"])
             st.divider()
 
-# ---------------------------------------------------------
-# 2. PESTAÑA: MEMORIA E HISTORIA
-# ---------------------------------------------------------
-elif pestaña == "📜 Memoria e Historia":
-    st.header("📜 Memoria e Historia de Nuestro Barrio")
-    st.write("Relatos, fotografías y recuerdos del camino recorrido por los pobladores de El Bosque 1 y La Pincoya.")
+# ==========================================
+# PESTAÑA 2: PANEL DE ADMINISTRACIÓN
+# ==========================================
+with pestaña2:
+    st.header("📝 Publicar Nueva Noticia")
+    st.write("Complete el siguiente formulario para ingresar una nueva publicación al portal:")
     
-    df_historia = df_aprobados[df_aprobados['categoria'].astype(str).str.strip().str.lower() == 'memoria e historia']
-    
-    if df_historia.empty:
-        st.info("No hay relatos históricos publicados todavía en esta pestaña.")
-    else:
-        for _, row in df_historia.iterrows():
-            titulo = obtener_texto(row.get('titulo'), "Sin título")
-            contenido = obtener_texto(row.get('contenido'), "")
-            autor = obtener_texto(row.get('autor'), "Anónimo")
-            fecha = obtener_texto(row.get('fecha'), "")
-            imagen = obtener_texto(row.get('imagen'), "")
-
-            st.markdown(f"### {titulo}")
-            st.caption(f"Publicado el {fecha} | Relatado por: {autor}")
-            st.write(contenido)
-            if imagen != "":
-                st.image(imagen, use_container_width=True)
-            st.divider()
-
-# ---------------------------------------------------------
-# 3. PESTAÑA: GALERÍA DE FOTOS
-# ---------------------------------------------------------
-elif pestaña == "📸 Galería":
-    st.header("📸 Galería Fotográfica")
-    st.write("Retratos de nuestros eventos, reuniones, vecinos e historia visual comunitaria.")
-    
-    df_galeria = df_aprobados[df_aprobados['imagen'].apply(lambda x: obtener_texto(x) != "")]
-    
-    if df_galeria.empty:
-        st.info("Aún no hay imágenes publicadas en la galería.")
-    else:
-        cols = st.columns(3)
-        for idx, (_, row) in enumerate(df_galeria.iterrows()):
-            with cols[idx % 3]:
-                st.image(row['imagen'], use_container_width=True)
-                st.caption(f"**{obtener_texto(row.get('titulo'), '')}**\n_{obtener_texto(row.get('fecha'), '')}_")
-
-# ---------------------------------------------------------
-# 4. PESTAÑA: AVISOS COMUNITARIOS
-# ---------------------------------------------------------
-elif pestaña == "📢 Avisos Comunitarios":
-    st.header("📢 Avisos y Datos del Barrio")
-    
-    df_avisos = df_aprobados[df_aprobados['categoria'].astype(str).str.strip().str.lower() == 'avisos comunitarios']
-    
-    if df_avisos.empty:
-        st.info("No hay avisos vigentes en este momento.")
-    else:
-        for _, row in df_avisos.iterrows():
-            st.warning(f"**{obtener_texto(row.get('titulo'), '')}**\n\n{obtener_texto(row.get('contenido'), '')}\n\n_Contacto / Autor: {obtener_texto(row.get('autor'), 'Vecino')}_")
-
-# ---------------------------------------------------------
-# 5. PESTAÑA: PARTICIPA
-# ---------------------------------------------------------
-elif pestaña == "✍️ Participa":
-    st.header("✍️ Envía tu Noticia, Relato o Aviso")
-    st.write("Escribe tu aporte para que el equipo editorial lo revise. Déjanos tus datos para poder contactarte.")
-    
-    with st.form("form_participa", clear_on_submit=True):
-        col_nom, col_cat = st.columns(2)
-        with col_nom:
-            nombre = st.text_input("Tu Nombre o Apodo:*")
-        with col_cat:
-            categoria = st.selectbox("Selecciona la Sección:*", [
-                "Inicio", 
-                "Memoria e Historia", 
-                "Galería", 
-                "Avisos Comunitarios"
-            ])
+    with st.form("form_noticia", clear_on_submit=True):
+        titulo = st.text_input("Título de la Noticia *")
+        categoria = st.selectbox("Categoría *", ["Comunidad", "Cultura", "Educación", "Deportes", "Avisos"])
+        bajada = st.text_input("Subtítulo / Bajada resumen")
+        contenido = st.text_area("Cuerpo del Artículo (admite formato Markdown) *", height=200)
         
-        col_mail, col_tel = st.columns(2)
-        with col_mail:
-            correo = st.text_input("Correo Electrónico de Contacto:")
-        with col_tel:
-            telefono = st.text_input("Teléfono / WhatsApp de Contacto:")
+        st.markdown("---")
+        st.markdown("##### 🖼️ Imágenes del Artículo (Opcional)")
+        
+        col_img1, col_img2 = st.columns(2)
+        with col_img1:
+            imagen1 = st.text_input("URL Imagen 1 (Enlace directo)")
+            pie1 = st.text_input("Pie de Foto 1")
             
-        titulo = st.text_input("Título de la Publicación:*")
-        contenido = st.text_area("Escribe tu texto o noticia aquí:*")
-        
-        enviado = st.form_submit_button("📤 Enviar para Revisión")
-        
-        if enviado:
-            if titulo.strip() == "" or contenido.strip() == "":
-                st.error("Por favor completa al menos el título y el contenido.")
-            else:
-                fecha_envio = pd.Timestamp.now().strftime("%Y-%m-%d %H:%M")
-                
-                nueva_fila = {
-                    "id": len(df_datos) + 1,
-                    "fecha": fecha_envio,
-                    "titulo": titulo,
-                    "categoria": categoria,
-                    "contenido": contenido,
-                    "autor": nombre.strip() if nombre.strip() != "" else "Vecino",
-                    "correo": correo.strip(),
-                    "telefono": telefono.strip(),
-                    "imagen": "",
-                    "estado": "Pendiente"
-                }
-                df_datos = pd.concat([df_datos, pd.DataFrame([nueva_fila])], ignore_index=True)
-                guardar_datos(df_datos)
-                st.success("¡Muchas gracias! Tu publicación ha sido enviada con éxito al equipo editorial.")
+        with col_img2:
+            imagen2 = st.text_input("URL Imagen 2 (Enlace directo)")
+            pie2 = st.text_input("Pie de Foto 2")
 
-# ---------------------------------------------------------
-# 6. PESTAÑA: ADMINISTRACIÓN
-# ---------------------------------------------------------
-elif pestaña == "🔒 Administración":
-    st.header("🔒 Panel de Administración Editorial")
-    
-    clave_ingresada = st.text_input("Ingresa la clave secreta:", type="password")
-    
-    if clave_ingresada == CLAVE_EDITORIAL:
-        st.success("Acceso concedido al Equipo Editorial.")
-        
-        st.subheader("📋 Registros en la Base de Datos")
-        cols_mostrar = ['id', 'fecha', 'titulo', 'categoria', 'autor', 'correo', 'telefono', 'estado']
-        cols_presentes = [c for c in cols_mostrar if c in df_datos.columns]
-        st.dataframe(df_datos[cols_presentes])
-        
-        st.subheader("📌 Publicaciones Pendientes")
-        df_pendientes = df_datos[df_datos['estado'].astype(str).str.strip().str.lower() == 'pendiente']
-        
-        if df_pendientes.empty:
-            st.info("No hay publicaciones pendientes por revisar.")
+        boton_publicar = st.form_submit_button("🚀 Publicar Noticia")
+
+    if boton_publicar:
+        if not titulo or not contenido:
+            st.error("Por favor complete los campos obligatorios (Título y Contenido).")
         else:
-            for idx, row in df_pendientes.iterrows():
-                with st.expander(f"Revisar: {obtener_texto(row.get('titulo'), 'Sin título')} (Enviado: {obtener_texto(row.get('fecha'), 'Sin fecha')})"):
-                    st.write(f"**Autor:** {obtener_texto(row.get('autor'), 'Anónimo')}")
-                    st.write(f"**Correo:** {obtener_texto(row.get('correo'), 'No proporcionado')}")
-                    st.write(f"**Teléfono:** {obtener_texto(row.get('telefono'), 'No proporcionado')}")
-                    st.write(f"**Categoría:** {obtener_texto(row.get('categoria'), 'General')}")
-                    st.write(f"**Contenido:** {obtener_texto(row.get('contenido'), '')}")
-                    
-                    col1, col2 = st.columns(2)
-                    with col1:
-                        if st.button(f"✅ Aprobar #{row['id']}", key=f"ap_{row['id']}"):
-                            df_datos.loc[df_datos['id'] == row['id'], 'estado'] = 'Aprobado'
-                            guardar_datos(df_datos)
-                            st.rerun()
-                    with col2:
-                        if st.button(f"🗑️ Descartar #{row['id']}", key=f"desc_{row['id']}"):
-                            df_datos = df_datos[df_datos['id'] != row['id']]
-                            guardar_datos(df_datos)
-                            st.rerun()
-    elif clave_ingresada != "":
-        st.error("Clave incorrecta.")
+            nueva_noticia = {
+                "titulo": titulo,
+                "categoria": categoria,
+                "bajada": bajada,
+                "contenido": contenido,
+                "imagen1": imagen1,
+                "pie1": pie1,
+                "imagen2": imagen2,
+                "pie2": pie2
+            }
+            # Se inserta al inicio de la lista para que aparezca primero
+            st.session_state.noticias.insert(0, nueva_noticia)
+            st.success("¡Noticia publicada con éxito! Vaya a la pestaña 'Edición Impresa / Noticias' para verla.")
+            st.rerun()
+
+# --- PIE DE PÁGINA ---
+st.markdown("---")
+st.markdown(
+    "<div style='text-align: center; color: #6B7280; font-size: 0.9em;'>"
+    "© La Voz Que Une - Portal Digital Comunitario | Desarrollado con Streamlit"
+    "</div>", 
+    unsafe_allow_html=True
+)
