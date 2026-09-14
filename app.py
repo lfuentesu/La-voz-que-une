@@ -7,28 +7,60 @@ st.set_page_config(
     layout="wide"
 )
 
-# --- ESTILOS CSS PERSONALIZADOS ---
+# --- ESTILOS CSS PERSONALIZADOS (Banner, Marquesina y Colores) ---
 st.markdown("""
     <style>
-    .main-title {
+    /* Header/Banner principal */
+    .header-container {
+        background: linear-gradient(135deg, #1E3A8A 0%, #0D9488 100%);
+        padding: 25px;
+        border-radius: 12px;
         text-align: center;
-        color: #1E3A8A;
+        color: white;
+        margin-bottom: 15px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    .header-title {
         font-family: 'Helvetica Neue', sans-serif;
-        font-weight: bold;
-        padding-bottom: 5px;
-        margin-bottom: 0px;
+        font-size: 2.8em;
+        font-weight: 800;
+        margin: 0;
+        letter-spacing: 1px;
     }
-    .sub-title {
-        text-align: center;
-        color: #4B5563;
-        font-size: 1.1em;
+    .header-sub {
+        font-size: 1.2em;
+        opacity: 0.9;
+        margin-top: 5px;
+    }
+    
+    /* Cinta desplazable / Marquesina */
+    .marquee-container {
+        background-color: #F3F4F6;
+        border-left: 5px solid #1E3A8A;
+        padding: 8px 15px;
         margin-bottom: 25px;
+        border-radius: 4px;
+        overflow: hidden;
+        white-space: nowrap;
     }
+    .marquee-text {
+        display: inline-block;
+        font-weight: 600;
+        color: #1F2937;
+        animation: marquee 18s linear infinite;
+    }
+    @keyframes marquee {
+        0% { transform: translateX(100%); }
+        100% { transform: translateX(-100%); }
+    }
+
+    /* Formato de botones */
     .stButton>button {
         width: 100%;
         background-color: #1E3A8A;
         color: white;
-        border-radius: 5px;
+        font-weight: bold;
+        border-radius: 6px;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -41,7 +73,7 @@ if "noticias" not in st.session_state:
             "categoria": "Comunidad",
             "bajada": "El nuevo portal digital comunitario al servicio de nuestros vecinos.",
             "contenido": """Estamos muy felices de presentar **La Voz Que Une**, un espacio diseñado para informar, conectar y destacar las iniciativas de nuestra comunidad. 
-            
+
 A través de este portal, compartiremos noticias locales, eventos, historias de vecinos y toda la información relevante para nuestro entorno.""",
             "imagen1": "https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=600",
             "pie1": "Periodismo comunitario y participativo.",
@@ -50,10 +82,20 @@ A través de este portal, compartiremos noticias locales, eventos, historias de 
         }
     ]
 
-# --- CABECERA PRINCIPAL ---
-st.markdown("<h1 class='main-title'>📰 LA VOZ QUE UNE</h1>", unsafe_allow_html=True)
-st.markdown("<p class='sub-title'>Diario Digital Comunitario</p>", unsafe_allow_html=True)
-st.divider()
+# --- BANNER PRINCIPAL ---
+st.markdown("""
+    <div class="header-container">
+        <div class="header-title">📰 LA VOZ QUE UNE</div>
+        <div class="header-sub">Portal Digital Comunitario e Informativo</div>
+    </div>
+""", unsafe_allow_html=True)
+
+# --- CINTA DE NOTICIAS DESPLAZABLES (MARQUESINA) ---
+st.markdown("""
+    <div class="marquee-container">
+        <span class="marquee-text">🔔 ÚLTIMA HORA: Bienvenidos a la nueva plataforma digital de La Voz Que Une &nbsp;&nbsp;&nbsp; | &nbsp;&nbsp;&nbsp; 📌 Revise las últimas noticias comunitarias en nuestra edición digital</span>
+    </div>
+""", unsafe_allow_html=True)
 
 # --- NAVEGACIÓN PRINCIPAL ---
 pestaña1, pestaña2 = st.tabs(["🗞️ Edición Impresa / Noticias", "⚙️ Panel de Administración"])
@@ -71,7 +113,7 @@ with pestaña1:
             if noticia.get("bajada"):
                 st.subheader(noticia["bajada"])
             
-            # --- MANEJO OPTIMIZADO DE IMÁGENES ---
+            # --- CONTROL DE TAMAÑO DE IMÁGENES ---
             img1 = noticia.get("imagen1", "").strip()
             img2 = noticia.get("imagen2", "").strip()
             
@@ -83,7 +125,7 @@ with pestaña1:
                 with col2:
                     st.image(img2, caption=noticia.get("pie2", ""), use_container_width=True)
             
-            # CASO B: Una sola imagen (Se muestra centrada y a tamaño moderado)
+            # CASO B: Una sola imagen (Centrada a tamaño moderado)
             elif img1:
                 col_izq, col_centro, col_der = st.columns([1, 2, 1])
                 with col_centro:
@@ -93,7 +135,7 @@ with pestaña1:
                 with col_centro:
                     st.image(img2, caption=noticia.get("pie2", ""), use_container_width=True)
 
-            # Contenido del texto de la noticia
+            # Contenido de la noticia
             st.markdown(noticia["contenido"])
             st.divider()
 
@@ -138,7 +180,6 @@ with pestaña2:
                 "imagen2": imagen2,
                 "pie2": pie2
             }
-            # Se inserta al inicio de la lista para que aparezca primero
             st.session_state.noticias.insert(0, nueva_noticia)
             st.success("¡Noticia publicada con éxito! Vaya a la pestaña 'Edición Impresa / Noticias' para verla.")
             st.rerun()
