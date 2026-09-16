@@ -1,4 +1,7 @@
 ﻿import streamlit as st
+import pandas as pd
+import os
+from datetime import datetime
 
 # Configuración inicial de la página
 st.set_page_config(
@@ -7,15 +10,26 @@ st.set_page_config(
     layout="wide"
 )
 
-# --- INICIALIZACIÓN DE VARIABLES EN MEMORIA (SESSION STATE) ---
+# ARCHIVO DE REGISTRO
+ARCHIVO_DATOS = "registros.csv"
+
+# Función para cargar datos desde la planilla
+def cargar_datos():
+    if os.path.exists(ARCHIVO_DATOS):
+        try:
+            return pd.read_csv(ARCHIVO_DATOS)
+        except Exception:
+            pass
+    # Si no existe, crear un DataFrame vacío estructurado
+    return pd.DataFrame(columns=["Fecha", "Nombre", "Tipo", "Mensaje", "Estado"])
+
+# Función para guardar datos en la planilla
+def guardar_datos(df):
+    df.to_csv(ARCHIVO_DATOS, index=False)
+
+# --- INICIALIZACIÓN DE VARIABLES EN MEMORIA ---
 if "mensaje_diario" not in st.session_state:
     st.session_state.mensaje_diario = "«La fuerza de nuestra comunidad radica en la unión, el respeto y la colaboración diaria entre vecinos.»"
-
-if "avisos_pendientes" not in st.session_state:
-    st.session_state.avisos_pendientes = [
-        {"vecino": "María González", "tipo": "Ofrecimiento", "texto": "Servicio de costura y arreglos de ropa.", "imagen": None},
-        {"vecino": "Juan Pérez", "tipo": "Aviso", "texto": "Se busca mascota extraviada (gato amarillo).", "imagen": None}
-    ]
 
 if "galeria_fotos" not in st.session_state:
     st.session_state.galeria_fotos = []
@@ -75,7 +89,7 @@ with tab3:
     st.header("💼 Avisos Económicos")
     st.write("Clasificados, emprendimientos y servicios de los vecinos.")
 
-# --- Pestaña 4: Participación Vecinal (Con envío de imágenes) ---
+# --- Pestaña 4: Participación Vecinal ---
 with tab4:
     st.header("🤝 Participación de los Vecinos")
     st.write("Envíe su aviso, propuesta, comentario o fotografía para ser publicado en el portal.")
@@ -89,13 +103,26 @@ with tab4:
         
         if enviado:
             if nombre.strip() != "" and (mensaje.strip() != "" or imagen_adjunta is not None):
-                st.session_state.avisos_pendientes.append({
-                    "vecino": nombre,
-                    "tipo": tipo_aporte,
-                    "texto": mensaje,
-                    "imagen": imagen_adjunta
-                })
-                st.success("¡Gracias! Su aporte ha sido enviado a la administración para revisión y aprobación.")
+                # Guardar el registro en el archivo tipo Excel/CSV
+                df_actual = cargar_datos()
+                nuevo_registro = {
+                    "Fecha": datetime.now().strftime("%Y-%m-%d %H:%M"),
+                    "Nombre": nombre,
+                    "Tipo": tipo_aporte,
+                    "Mensaje": mensaje,
+                    "Estado": "Pendiente"
+                }
+                df_actual = pd.concat([df_actual, pd.DataFrame([nuevo_registro])], ignore_index=True)
+                guardar_datos(df_actual)
+                
+                # Si trae imagen para galería
+                if tipo_aporte == "Fotografía para Galería" and imagen_adjunta is not None:
+                    st.session_state.galeria_fotos.append({
+                        "archivo": imagen_adjunta,
+                        "descripcion": f"Enviada por {nombre}: {mensaje}"
+                    })
+                
+                st.success("¡Gracias! Su aporte ha sido guardado en el registro y enviado a revisión.")
             else:
                 st.warning("Por favor complete su nombre y un mensaje o imagen antes de enviar.")
 
@@ -112,14 +139,13 @@ with tab6:
 # --- Pestaña 7: Administración Protegida ---
 with tab7:
     st.header("⚙️ Administración del Portal")
-
+    
     clave = st.text_input("Ingrese la clave de administrador:", type="password")
     
-    # Recuerde que puede personalizar la clave sustituyendo "1234"
     if clave == "bosque2026":
         st.success("Acceso concedido al Panel de Control.")
         
-        # --- A. CAMBIAR MENSAJE DIARIO ---
+        # --- A. EDITAR MENSAJE DIARIO ---
         st.subheader("📝 Editar Mensaje del Día (Desplazable)")
         nuevo_mensaje = st.text_input("Nuevo mensaje:", value=st.session_state.mensaje_diario)
         if st.button("Actualizar Mensaje"):
@@ -129,53 +155,50 @@ with tab7:
             
         st.write("---")
         
-        # --- B. SUBIR FOTOS DIRECTAS A LA GALERÍA ---
-        st.subheader("📸 Subir Imagen Directa a la Galería")
-        imagen_subida = st.file_uploader("Seleccione una imagen (JPG, PNG):", type=["jpg", "jpeg", "png"], key="admin_uploader")
-        descripcion_foto = st.text_input("Descripción o pie de foto:")
+        # --- B. PLANILLA DE REGISTRO TIPO EXCEL ---
+        st.subheader("📊 Registros y Solicitudes de Vecinos (Archivo Planilla)")
+        df_registros = cargar_datos()
         
-        if st.button("Publicar Imagen"):
-            if imagen_subida is not None:
-                st.session_state.galeria_fotos.append({
-                    "archivo": imagen_subida,
-                    "descripcion": descripcion_foto
-                })
-                st.success("¡Imagen publicada en la Galería Comunitaria!")
-                st.rerun()
-            else:
-                st.warning("Por favor seleccione un archivo de imagen primero.")
-                
-        st.write("---")
-        
-        # --- C. GESTIÓN DE AVISOS Y FOTOS PENDIENTES ---
-        st.subheader("📋 Solicitudes de Vecinos Pendientes")
-        if len(st.session_state.avisos_pendientes) == 0:
-            st.info("No hay publicaciones ni fotos pendientes de aprobación.")
+        if df_registros.empty:
+            st.info("Aún no hay registros de solicitudes en la base de datos.")
         else:
-            for i, aviso in enumerate(list(st.session_state.avisos_pendientes)):
-                with st.expander(f"Solicitud de: {aviso['vecino']} ({aviso['tipo']})"):
-                    if aviso['texto']:
-                        st.write(f"**Mensaje:** {aviso['texto']}")
-                    if aviso.get('imagen') is not None:
-                        st.image(aviso['imagen'], caption="Imagen adjunta por el vecino", width=300)
-                    
-                    col1, col2 = st.columns(2)
-                    with col1:
-                        if st.button(f"Aprobar", key=f"aprob_{i}"):
-                            # Si es una foto para galería, se agrega a la galería
-                            if aviso['tipo'] == "Fotografía para Galería" and aviso.get('imagen') is not None:
-                                st.session_state.galeria_fotos.append({
-                                    "archivo": aviso['imagen'],
-                                    "descripcion": f"Enviada por {aviso['vecino']}: {aviso['texto']}"
-                                })
-                            st.session_state.avisos_pendientes.pop(i)
-                            st.success("Aprobado correctamente.")
-                            st.rerun()
-                    with col2:
-                        if st.button(f"Descartar", key=f"desc_{i}"):
-                            st.session_state.avisos_pendientes.pop(i)
-                            st.error("Descartado.")
-                            st.rerun()
+            # Muestra la tabla estilo Excel
+            st.dataframe(df_registros, use_container_width=True)
+            
+            # Opción para descargar el archivo CSV/Excel
+            csv_data = df_registros.to_csv(index=False).encode('utf-8')
+            st.download_button(
+                label="📥 Descargar planilla de registros (CSV)",
+                data=csv_data,
+                file_name="registros_la_voz_que_une.csv",
+                mime="text/csv"
+            )
+            
+            st.write("---")
+            st.subheader("📋 Gestión de Estados (Aprobar / Descartar)")
+            
+            # Filtrar los pendientes
+            pendientes = df_registros[df_registros["Estado"] == "Pendiente"]
+            
+            if pendientes.empty:
+                st.info("No hay solicitudes pendientes por revisar.")
+            else:
+                for idx, row in pendientes.iterrows():
+                    with st.expander(f"Solicitud #{idx+1}: {row['Nombre']} ({row['Tipo']}) - {row['Fecha']}"):
+                        st.write(f"**Mensaje:** {row['Mensaje']}")
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            if st.button(f"Aprobar solicitud", key=f"aprob_df_{idx}"):
+                                df_registros.at[idx, "Estado"] = "Aprobado"
+                                guardar_datos(df_registros)
+                                st.success("Estado cambiado a Aprobado.")
+                                st.rerun()
+                        with col2:
+                            if st.button(f"Descartar solicitud", key=f"desc_df_{idx}"):
+                                df_registros.at[idx, "Estado"] = "Descartado"
+                                guardar_datos(df_registros)
+                                st.error("Estado cambiado a Descartado.")
+                                st.rerun()
 
     elif clave != "":
         st.error("Clave incorrecta. Intente nuevamente.")
