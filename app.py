@@ -20,7 +20,6 @@ def cargar_datos():
             return pd.read_csv(ARCHIVO_DATOS)
         except Exception:
             pass
-    # Si no existe, crear un DataFrame vacío estructurado
     return pd.DataFrame(columns=["Fecha", "Nombre", "Tipo", "Mensaje", "Estado"])
 
 # Función para guardar datos en la planilla
@@ -55,6 +54,9 @@ st.markdown(mensaje_html, unsafe_allow_html=True)
 
 st.write("---")
 
+# Cargar la base de datos de registros
+df_registros = cargar_datos()
+
 # Definición de pestañas principales
 tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
     "Noticias", 
@@ -70,6 +72,18 @@ tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
 with tab1:
     st.header("📌 Noticias Locales")
     st.write("Bienvenido al portal informativo comunal de la Población El Bosque.")
+    
+    # Mostrar noticias aprobadas
+    noticias_aprobadas = df_registros[(df_registros["Tipo"].str.contains("Noticia", case=False, na=False)) & (df_registros["Estado"] == "Aprobado")]
+    
+    if noticias_aprobadas.empty:
+        st.info("No hay noticias publicadas recientemente.")
+    else:
+        for _, row in noticias_aprobadas.iterrows():
+            with st.container():
+                st.subheader(f"📰 {row['Nombre']} ({row['Fecha']})")
+                st.write(row['Mensaje'])
+                st.write("---")
 
 # --- Pestaña 2: Galería de Fotos ---
 with tab2:
@@ -88,23 +102,33 @@ with tab2:
 with tab3:
     st.header("💼 Avisos Económicos")
     st.write("Clasificados, emprendimientos y servicios de los vecinos.")
+    
+    # Mostrar avisos económicos aprobados
+    avisos_aprobados = df_registros[(df_registros["Tipo"].str.contains("Aviso", case=False, na=False)) & (df_registros["Estado"] == "Aprobado")]
+    
+    if avisos_aprobados.empty:
+        st.info("No hay avisos económicos publicados por el momento.")
+    else:
+        for _, row in avisos_aprobados.iterrows():
+            with st.container():
+                st.success(f"💼 {row['Nombre']} - {row['Fecha']}")
+                st.write(row['Mensaje'])
+                st.write("---")
 
 # --- Pestaña 4: Participación Vecinal ---
 with tab4:
     st.header("🤝 Participación de los Vecinos")
-    st.write("Envíe su aviso, propuesta, comentario o fotografía para ser publicado en el portal.")
+    st.write("Envíe su aviso, noticia, propuesta o fotografía para ser publicado en el portal.")
     
     with st.form("form_participacion"):
         nombre = st.text_input("Su Nombre y Apellido:")
-        tipo_aporte = st.selectbox("Tipo de publicación:", ["Aviso Económico", "Noticia / Aporte", "Fotografía para Galería", "Sugerencia"])
+        tipo_aporte = st.selectbox("Tipo de publicación:", ["Noticia", "Aviso Económico", "Fotografía para Galería", "Sugerencia"])
         mensaje = st.text_area("Escriba su mensaje o detalle de la publicación:")
         imagen_adjunta = st.file_uploader("Adjuntar una imagen o fotografía (opcional):", type=["jpg", "jpeg", "png"])
         enviado = st.form_submit_button("Enviar para revisión")
         
         if enviado:
             if nombre.strip() != "" and (mensaje.strip() != "" or imagen_adjunta is not None):
-                # Guardar el registro en el archivo tipo Excel/CSV
-                df_actual = cargar_datos()
                 nuevo_registro = {
                     "Fecha": datetime.now().strftime("%Y-%m-%d %H:%M"),
                     "Nombre": nombre,
@@ -112,17 +136,16 @@ with tab4:
                     "Mensaje": mensaje,
                     "Estado": "Pendiente"
                 }
-                df_actual = pd.concat([df_actual, pd.DataFrame([nuevo_registro])], ignore_index=True)
-                guardar_datos(df_actual)
+                df_registros = pd.concat([df_registros, pd.DataFrame([nuevo_registro])], ignore_index=True)
+                guardar_datos(df_registros)
                 
-                # Si trae imagen para galería
                 if tipo_aporte == "Fotografía para Galería" and imagen_adjunta is not None:
                     st.session_state.galeria_fotos.append({
                         "archivo": imagen_adjunta,
                         "descripcion": f"Enviada por {nombre}: {mensaje}"
                     })
                 
-                st.success("¡Gracias! Su aporte ha sido guardado en el registro y enviado a revisión.")
+                st.success("¡Gracias! Su aporte ha sido enviado a la administración para revisión y aprobación.")
             else:
                 st.warning("Por favor complete su nombre y un mensaje o imagen antes de enviar.")
 
@@ -142,7 +165,7 @@ with tab7:
     
     clave = st.text_input("Ingrese la clave de administrador:", type="password")
     
-    if clave == "bosque2026":
+    if clave == "1234":
         st.success("Acceso concedido al Panel de Control.")
         
         # --- A. EDITAR MENSAJE DIARIO ---
@@ -156,16 +179,13 @@ with tab7:
         st.write("---")
         
         # --- B. PLANILLA DE REGISTRO TIPO EXCEL ---
-        st.subheader("📊 Registros y Solicitudes de Vecinos (Archivo Planilla)")
-        df_registros = cargar_datos()
+        st.subheader("📊 Registros y Solicitudes de Vecinos (Planilla)")
         
         if df_registros.empty:
             st.info("Aún no hay registros de solicitudes en la base de datos.")
         else:
-            # Muestra la tabla estilo Excel
             st.dataframe(df_registros, use_container_width=True)
             
-            # Opción para descargar el archivo CSV/Excel
             csv_data = df_registros.to_csv(index=False).encode('utf-8')
             st.download_button(
                 label="📥 Descargar planilla de registros (CSV)",
@@ -177,7 +197,6 @@ with tab7:
             st.write("---")
             st.subheader("📋 Gestión de Estados (Aprobar / Descartar)")
             
-            # Filtrar los pendientes
             pendientes = df_registros[df_registros["Estado"] == "Pendiente"]
             
             if pendientes.empty:
@@ -191,13 +210,13 @@ with tab7:
                             if st.button(f"Aprobar solicitud", key=f"aprob_df_{idx}"):
                                 df_registros.at[idx, "Estado"] = "Aprobado"
                                 guardar_datos(df_registros)
-                                st.success("Estado cambiado a Aprobado.")
+                                st.success("Solicitud aprobada y publicada automáticamente.")
                                 st.rerun()
                         with col2:
                             if st.button(f"Descartar solicitud", key=f"desc_df_{idx}"):
                                 df_registros.at[idx, "Estado"] = "Descartado"
                                 guardar_datos(df_registros)
-                                st.error("Estado cambiado a Descartado.")
+                                st.error("Solicitud descartada.")
                                 st.rerun()
 
     elif clave != "":
