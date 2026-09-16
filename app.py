@@ -7,18 +7,9 @@ st.set_page_config(
     layout="wide"
 )
 
-# --- 1. BANNER E IDENTIFICADOR DE PORTADA ---
-st.markdown(
-    """
-    <div style="background-color: #1E3A8A; padding: 20px; border-radius: 10px; text-align: center; color: white;">
-        <h1 style="margin: 0; color: white;">📰 LA VOZ QUE UNE</h1>
-        <p style="margin: 5px 0 0 0; font-size: 1.2em; color: #E2E8F0;">
-            Portal Digital Comunitario e Informativo - Población El Bosque
-        </p>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
+# --- 1. BANNER OFICIAL CON IMAGEN ---
+# Muestra la imagen banner.jpeg guardada en la carpeta del proyecto
+st.image("banner.jpeg", use_container_width=True)
 
 st.write("")
 
@@ -100,7 +91,7 @@ with tab7:
     # Control de acceso por contraseña
     clave = st.text_input("Ingrese la clave de administrador:", type="password")
     
-    # Clave de acceso por defecto (puede cambiarla aquí)
+    # Clave de acceso por defecto: 1234
     if clave == "1234":
         st.success("Acceso concedido al Panel de Control.")
         st.subheader("📋 Solicitudes de Avisos Pendientes")
