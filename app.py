@@ -165,7 +165,7 @@ with tab7:
     
     clave = st.text_input("Ingrese la clave de administrador:", type="password")
     
-    if clave == "1234":
+    if clave == "bosque2026":
         st.success("Acceso concedido al Panel de Control.")
         
         # --- A. EDITAR MENSAJE DIARIO ---
