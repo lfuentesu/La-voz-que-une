@@ -167,5 +167,3 @@ with tab7:
 
     elif clave != "":
         st.error("Clave incorrecta. Intente nuevamente.")
-    else:
-        st.info("Por favor, ingrese la contraseña para acceder a las opciones de administración.")
