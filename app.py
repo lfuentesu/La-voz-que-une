@@ -112,11 +112,11 @@ with tab6:
 # --- Pestaña 7: Administración Protegida ---
 with tab7:
     st.header("⚙️ Administración del Portal")
-    
+
     clave = st.text_input("Ingrese la clave de administrador:", type="password")
     
     # Recuerde que puede personalizar la clave sustituyendo "1234"
-    if clave == "1234":
+    if clave == "bosque2026":
         st.success("Acceso concedido al Panel de Control.")
         
         # --- A. CAMBIAR MENSAJE DIARIO ---
