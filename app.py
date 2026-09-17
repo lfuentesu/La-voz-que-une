@@ -12,6 +12,11 @@ st.set_page_config(
 
 # ARCHIVO DE REGISTRO
 ARCHIVO_DATOS = "registros.csv"
+CARPETA_GALERIA = "galeria"
+
+# Crear carpeta de galería local si no existe
+if not os.path.exists(CARPETA_GALERIA):
+    os.makedirs(CARPETA_GALERIA)
 
 # Función para cargar datos desde la planilla
 def cargar_datos():
@@ -29,9 +34,6 @@ def guardar_datos(df):
 # --- INICIALIZACIÓN DE VARIABLES EN MEMORIA ---
 if "mensaje_diario" not in st.session_state:
     st.session_state.mensaje_diario = "«La fuerza de nuestra comunidad radica en la unión, el respeto y la colaboración diaria entre vecinos.»"
-
-if "galeria_fotos" not in st.session_state:
-    st.session_state.galeria_fotos = []
 
 # --- 1. BANNER OFICIAL CON IMAGEN ---
 try:
@@ -73,7 +75,6 @@ with tab1:
     st.header("📌 Noticias Locales")
     st.write("Bienvenido al portal informativo comunal de la Población El Bosque.")
     
-    # Mostrar noticias aprobadas
     noticias_aprobadas = df_registros[(df_registros["Tipo"].str.contains("Noticia", case=False, na=False)) & (df_registros["Estado"] == "Aprobado")]
     
     if noticias_aprobadas.empty:
@@ -90,20 +91,23 @@ with tab2:
     st.header("📸 Galería Comunitaria")
     st.write("Espacio fotográfico de nuestros eventos e historia vecinal.")
     
-    if len(st.session_state.galeria_fotos) == 0:
-        st.info("Aún no hay fotografías publicadas en la galería.")
+    # Buscar todas las fotos dentro de la carpeta 'galeria'
+    archivos_galeria = [f for f in os.listdir(CARPETA_GALERIA) if f.lower().endswith(('.png', '.jpg', '.jpeg', '.webp'))] if os.path.exists(CARPETA_GALERIA) else []
+    
+    if len(archivos_galeria) == 0:
+        st.info("Aún no hay fotografías guardadas en la galería comunitaria.")
     else:
         cols = st.columns(3)
-        for idx, foto in enumerate(st.session_state.galeria_fotos):
+        for idx, archivo_nombre in enumerate(archivos_galeria):
+            ruta_imagen = os.path.join(CARPETA_GALERIA, archivo_nombre)
             with cols[idx % 3]:
-                st.image(foto["archivo"], caption=foto["descripcion"], use_container_width=True)
+                st.image(ruta_imagen, caption=archivo_nombre.replace('_', ' ').split('.')[0], use_container_width=True)
 
 # --- Pestaña 3: Avisos Económicos ---
 with tab3:
     st.header("💼 Avisos Económicos")
     st.write("Clasificados, emprendimientos y servicios de los vecinos.")
     
-    # Mostrar avisos económicos aprobados
     avisos_aprobados = df_registros[(df_registros["Tipo"].str.contains("Aviso", case=False, na=False)) & (df_registros["Estado"] == "Aprobado")]
     
     if avisos_aprobados.empty:
@@ -129,6 +133,14 @@ with tab4:
         
         if enviado:
             if nombre.strip() != "" and (mensaje.strip() != "" or imagen_adjunta is not None):
+                
+                # Si adjuntó una imagen, se guarda directo en la carpeta galeria
+                if imagen_adjunta is not None:
+                    nombre_archivo = f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{imagen_adjunta.name}"
+                    ruta_guardado = os.path.join(CARPETA_GALERIA, nombre_archivo)
+                    with open(ruta_guardado, "wb") as f:
+                        f.write(imagen_adjunta.getbuffer())
+
                 nuevo_registro = {
                     "Fecha": datetime.now().strftime("%Y-%m-%d %H:%M"),
                     "Nombre": nombre,
@@ -138,12 +150,6 @@ with tab4:
                 }
                 df_registros = pd.concat([df_registros, pd.DataFrame([nuevo_registro])], ignore_index=True)
                 guardar_datos(df_registros)
-                
-                if tipo_aporte == "Fotografía para Galería" and imagen_adjunta is not None:
-                    st.session_state.galeria_fotos.append({
-                        "archivo": imagen_adjunta,
-                        "descripcion": f"Enviada por {nombre}: {mensaje}"
-                    })
                 
                 st.success("¡Gracias! Su aporte ha sido enviado a la administración para revisión y aprobación.")
             else:
@@ -165,7 +171,7 @@ with tab7:
     
     clave = st.text_input("Ingrese la clave de administrador:", type="password")
     
-    if clave == "bosque2026":
+    if clave == "1234":
         st.success("Acceso concedido al Panel de Control.")
         
         # --- A. EDITAR MENSAJE DIARIO ---
@@ -178,7 +184,23 @@ with tab7:
             
         st.write("---")
         
-        # --- B. PLANILLA DE REGISTRO TIPO EXCEL ---
+        # --- B. SUBIR IMAGEN DIRECTA A LA GALERÍA DESDE ADMIN ---
+        st.subheader("📸 Cargar Imagen Directa a la Galería")
+        foto_admin = st.file_uploader("Seleccione una foto para la galería:", type=["jpg", "jpeg", "png"], key="upload_admin_directo")
+        if st.button("Guardar en Galería"):
+            if foto_admin is not None:
+                nombre_archivo = f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{foto_admin.name}"
+                ruta_guardado = os.path.join(CARPETA_GALERIA, nombre_archivo)
+                with open(ruta_guardado, "wb") as f:
+                    f.write(foto_admin.getbuffer())
+                st.success("¡Fotografía guardada permanentemente en la galería!")
+                st.rerun()
+            else:
+                st.warning("Seleccione una imagen primero.")
+
+        st.write("---")
+
+        # --- C. PLANILLA DE REGISTRO TIPO EXCEL ---
         st.subheader("📊 Registros y Solicitudes de Vecinos (Planilla)")
         
         if df_registros.empty:
