@@ -10,7 +10,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# ARCHIVO DE REGISTRO
+# ARCHIVO DE REGISTRO Y CARPETA DE GALERÍA
 ARCHIVO_DATOS = "registros.csv"
 CARPETA_GALERIA = "galeria"
 
@@ -91,17 +91,19 @@ with tab2:
     st.header("📸 Galería Comunitaria")
     st.write("Espacio fotográfico de nuestros eventos e historia vecinal.")
     
-    # Buscar todas las fotos dentro de la carpeta 'galeria'
+    # Cargar imágenes desde la carpeta 'galeria'
     archivos_galeria = [f for f in os.listdir(CARPETA_GALERIA) if f.lower().endswith(('.png', '.jpg', '.jpeg', '.webp'))] if os.path.exists(CARPETA_GALERIA) else []
     
     if len(archivos_galeria) == 0:
-        st.info("Aún no hay fotografías guardadas en la galería comunitaria.")
+        st.info("Aún no hay fotografías publicadas en la galería comunitaria.")
     else:
         cols = st.columns(3)
         for idx, archivo_nombre in enumerate(archivos_galeria):
             ruta_imagen = os.path.join(CARPETA_GALERIA, archivo_nombre)
             with cols[idx % 3]:
-                st.image(ruta_imagen, caption=archivo_nombre.replace('_', ' ').split('.')[0], use_container_width=True)
+                # Muestra la imagen con un pie de foto limpio
+                nombre_limpio = archivo_nombre.split('_', 2)[-1].replace('_', ' ').rsplit('.', 1)[0]
+                st.image(ruta_imagen, caption=nombre_limpio if nombre_limpio else archivo_nombre, use_container_width=True)
 
 # --- Pestaña 3: Avisos Económicos ---
 with tab3:
@@ -134,9 +136,9 @@ with tab4:
         if enviado:
             if nombre.strip() != "" and (mensaje.strip() != "" or imagen_adjunta is not None):
                 
-                # Si adjuntó una imagen, se guarda directo en la carpeta galeria
+                # Guardar imagen en la carpeta 'galeria' si adjuntó una
                 if imagen_adjunta is not None:
-                    nombre_archivo = f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{imagen_adjunta.name}"
+                    nombre_archivo = f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{imagen_adjunta.name.replace(' ', '_')}"
                     ruta_guardado = os.path.join(CARPETA_GALERIA, nombre_archivo)
                     with open(ruta_guardado, "wb") as f:
                         f.write(imagen_adjunta.getbuffer())
@@ -167,12 +169,13 @@ with tab6:
 
 # --- Pestaña 7: Administración Protegida ---
 with tab7:
-    st.header("⚙️ Administración del Portal")
+    st.header("⚙️ Administración del Portal Editorial")
+    st.caption("Panel exclusivo para el equipo editorial de La Voz Que Une")
     
     clave = st.text_input("Ingrese la clave de administrador:", type="password")
     
-    if clave == "1234":
-        st.success("Acceso concedido al Panel de Control.")
+    if clave == "1234":  # Recuerde colocar aquí su clave personalizada
+        st.success("Acceso concedido al Panel Editorial.")
         
         # --- A. EDITAR MENSAJE DIARIO ---
         st.subheader("📝 Editar Mensaje del Día (Desplazable)")
@@ -184,19 +187,23 @@ with tab7:
             
         st.write("---")
         
-        # --- B. SUBIR IMAGEN DIRECTA A LA GALERÍA DESDE ADMIN ---
+        # --- B. SUBIDA DIRECTA DE FOTOS PARA EL EQUIPO EDITORIAL ---
         st.subheader("📸 Cargar Imagen Directa a la Galería")
-        foto_admin = st.file_uploader("Seleccione una foto para la galería:", type=["jpg", "jpeg", "png"], key="upload_admin_directo")
-        if st.button("Guardar en Galería"):
+        st.write("Cargue una foto directamente desde su computador o celular para que aparezca en la Galería.")
+        foto_admin = st.file_uploader("Seleccione una imagen (JPG, PNG):", type=["jpg", "jpeg", "png"], key="upload_editorial")
+        pie_de_foto = st.text_input("Pie de foto o descripción corta (opcional):")
+        
+        if st.button("Publicar Foto en Galería"):
             if foto_admin is not None:
-                nombre_archivo = f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{foto_admin.name}"
+                texto_desc = pie_de_foto.replace(' ', '_') if pie_de_foto.strip() != "" else foto_admin.name.replace(' ', '_')
+                nombre_archivo = f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{texto_desc}.jpg"
                 ruta_guardado = os.path.join(CARPETA_GALERIA, nombre_archivo)
                 with open(ruta_guardado, "wb") as f:
                     f.write(foto_admin.getbuffer())
-                st.success("¡Fotografía guardada permanentemente en la galería!")
+                st.success("¡Fotografía publicada con éxito en la Galería Comunitaria!")
                 st.rerun()
             else:
-                st.warning("Seleccione una imagen primero.")
+                st.warning("Seleccione un archivo de imagen antes de publicar.")
 
         st.write("---")
 
@@ -244,4 +251,4 @@ with tab7:
     elif clave != "":
         st.error("Clave incorrecta. Intente nuevamente.")
     else:
-        st.info("Por favor, ingrese la contraseña para acceder a las opciones de administración.")
+        st.info("Por favor, ingrese la contraseña de administración para acceder.")
