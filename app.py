@@ -10,11 +10,11 @@ st.set_page_config(
     layout="wide"
 )
 
-# ARCHIVO DE REGISTRO Y CARPETA DE GALERÍA
+# ARCHIVO DE REGISTRO Y CARPETA PRINCIPAL DE GALERÍA
 ARCHIVO_DATOS = "registros.csv"
 CARPETA_GALERIA = "galeria"
 
-# Crear carpeta de galería local si no existe
+# Crear carpeta principal de galería local si no existe
 if not os.path.exists(CARPETA_GALERIA):
     os.makedirs(CARPETA_GALERIA)
 
@@ -86,24 +86,41 @@ with tab1:
                 st.write(row['Mensaje'])
                 st.write("---")
 
-# --- Pestaña 2: Galería de Fotos ---
+# --- Pestaña 2: Galería de Fotos Organizables por Tema ---
 with tab2:
     st.header("📸 Galería Comunitaria")
     st.write("Espacio fotográfico de nuestros eventos e historia vecinal.")
     
-    # Cargar imágenes desde la carpeta 'galeria'
-    archivos_galeria = [f for f in os.listdir(CARPETA_GALERIA) if f.lower().endswith(('.png', '.jpg', '.jpeg', '.webp'))] if os.path.exists(CARPETA_GALERIA) else []
-    
-    if len(archivos_galeria) == 0:
-        st.info("Aún no hay fotografías publicadas en la galería comunitaria.")
-    else:
-        cols = st.columns(3)
-        for idx, archivo_nombre in enumerate(archivos_galeria):
-            ruta_imagen = os.path.join(CARPETA_GALERIA, archivo_nombre)
-            with cols[idx % 3]:
-                # Muestra la imagen con un pie de foto limpio
+    if os.path.exists(CARPETA_GALERIA):
+        # Obtener lista de subcarpetas (temas) dentro de 'galeria'
+        subcarpetas = [d for d in os.listdir(CARPETA_GALERIA) if os.path.isdir(os.path.join(CARPETA_GALERIA, d))]
+        
+        # Selector de tema para el vecino
+        opciones_temas = ["Ver todas las fotos"] + subcarpetas
+        tema_seleccionado = st.selectbox("📂 Seleccione una categoría o tema:", opciones_temas)
+        
+        # Obtener archivos de imágenes según el filtro
+        archivos_galeria = []
+        if tema_seleccionado == "Ver todas las fotos":
+            for root, _, files in os.walk(CARPETA_GALERIA):
+                for f in files:
+                    if f.lower().endswith(('.png', '.jpg', '.jpeg', '.webp')):
+                        archivos_galeria.append(os.path.join(root, f))
+        else:
+            ruta_tema = os.path.join(CARPETA_GALERIA, tema_seleccionado)
+            for f in os.listdir(ruta_tema):
+                if f.lower().endswith(('.png', '.jpg', '.jpeg', '.webp')):
+                    archivos_galeria.append(os.path.join(ruta_tema, f))
+
+        if len(archivos_galeria) == 0:
+            st.info("No hay fotografías en esta categoría por el momento.")
+        else:
+            cols = st.columns(3)
+            for idx, ruta_imagen in enumerate(archivos_galeria):
+                archivo_nombre = os.path.basename(ruta_imagen)
                 nombre_limpio = archivo_nombre.split('_', 2)[-1].replace('_', ' ').rsplit('.', 1)[0]
-                st.image(ruta_imagen, caption=nombre_limpio if nombre_limpio else archivo_nombre, use_container_width=True)
+                with cols[idx % 3]:
+                    st.image(ruta_imagen, caption=nombre_limpio if nombre_limpio else archivo_nombre, use_container_width=True)
 
 # --- Pestaña 3: Avisos Económicos ---
 with tab3:
@@ -135,8 +152,6 @@ with tab4:
         
         if enviado:
             if nombre.strip() != "" and (mensaje.strip() != "" or imagen_adjunta is not None):
-                
-                # Guardar imagen en la carpeta 'galeria' si adjuntó una
                 if imagen_adjunta is not None:
                     nombre_archivo = f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{imagen_adjunta.name.replace(' ', '_')}"
                     ruta_guardado = os.path.join(CARPETA_GALERIA, nombre_archivo)
@@ -174,7 +189,7 @@ with tab7:
     
     clave = st.text_input("Ingrese la clave de administrador:", type="password")
     
-    if clave == "bosque2026":
+    if clave == "Bosque2026":  # Reemplace aquí por su clave si la cambió
         st.success("Acceso concedido al Panel Editorial.")
         
         # --- A. EDITAR MENSAJE DIARIO ---
@@ -186,10 +201,33 @@ with tab7:
             st.rerun()
             
         st.write("---")
+
+        # --- B. GESTIÓN DE CATEGORÍAS/CARPETAS DE GALERÍA ---
+        st.subheader("📁 Crear Nueva Categoría o Tema para la Galería")
+        nombre_nueva_carpeta = st.text_input("Nombre de la nueva categoría (ej: Fiestas Patrias, Talleres, Historia):")
+        if st.button("Crear Categoría"):
+            if nombre_nueva_carpeta.strip() != "":
+                nombre_carpeta_limpio = nombre_nueva_carpeta.strip().replace(" ", "_")
+                ruta_nueva = os.path.join(CARPETA_GALERIA, nombre_carpeta_limpio)
+                if not os.path.exists(ruta_nueva):
+                    os.makedirs(ruta_nueva)
+                    st.success(f"¡Categoría '{nombre_nueva_carpeta}' creada con éxito!")
+                    st.rerun()
+                else:
+                    st.info("Esa categoría ya existe.")
+            else:
+                st.warning("Escriba un nombre para la categoría.")
+
+        st.write("---")
         
-        # --- B. SUBIDA DIRECTA DE FOTOS PARA EL EQUIPO EDITORIAL ---
+        # --- C. SUBIDA DIRECTA DE FOTOS POR CATEGORÍA ---
         st.subheader("📸 Cargar Imagen Directa a la Galería")
-        st.write("Cargue una foto directamente desde su computador o celular para que aparezca en la Galería.")
+        
+        # Obtener lista actualizada de subcarpetas existentes
+        subcarpetas = [d for d in os.listdir(CARPETA_GALERIA) if os.path.isdir(os.path.join(CARPETA_GALERIA, d))]
+        opciones_destino = ["General (Sin tema específico)"] + subcarpetas
+        
+        carpeta_destino = st.selectbox("Seleccione la categoría donde guardar la foto:", opciones_destino)
         foto_admin = st.file_uploader("Seleccione una imagen (JPG, PNG):", type=["jpg", "jpeg", "png"], key="upload_editorial")
         pie_de_foto = st.text_input("Pie de foto o descripción corta (opcional):")
         
@@ -197,7 +235,12 @@ with tab7:
             if foto_admin is not None:
                 texto_desc = pie_de_foto.replace(' ', '_') if pie_de_foto.strip() != "" else foto_admin.name.replace(' ', '_')
                 nombre_archivo = f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{texto_desc}.jpg"
-                ruta_guardado = os.path.join(CARPETA_GALERIA, nombre_archivo)
+                
+                if carpeta_destino == "General (Sin tema específico)":
+                    ruta_guardado = os.path.join(CARPETA_GALERIA, nombre_archivo)
+                else:
+                    ruta_guardado = os.path.join(CARPETA_GALERIA, carpeta_destino, nombre_archivo)
+
                 with open(ruta_guardado, "wb") as f:
                     f.write(foto_admin.getbuffer())
                 st.success("¡Fotografía publicada con éxito en la Galería Comunitaria!")
@@ -207,7 +250,7 @@ with tab7:
 
         st.write("---")
 
-        # --- C. PLANILLA DE REGISTRO TIPO EXCEL ---
+        # --- D. PLANILLA DE REGISTRO TIPO EXCEL ---
         st.subheader("📊 Registros y Solicitudes de Vecinos (Planilla)")
         
         if df_registros.empty:
