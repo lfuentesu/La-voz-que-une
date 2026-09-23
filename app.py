@@ -41,34 +41,39 @@ elif opcion == "Galería":
         categorias = [c for c in os.listdir(ruta_galeria) if os.path.isdir(os.path.join(ruta_galeria, c))]
         
         if categorias:
-            # Selector desplegable de categorías
-            categoria_seleccionada = st.selectbox("Seleccione una categoría:", categorias)
+            # Opción por defecto para no mostrar ninguna categoría al inicio
+            opciones_categorias = ["-- Seleccione una categoría --"] + categorias
+            categoria_seleccionada = st.selectbox("Seleccione una categoría de la lista:", opciones_categorias)
 
-            ruta_categoria = os.path.join(ruta_galeria, categoria_seleccionada)
-            
-            # Obtener archivos de imagen (.jpg, .png, .jpeg)
-            extensiones_validas = ('.jpg', '.jpeg', '.png', '.JPG', '.JPEG', '.PNG')
-            fotos = [f for f in os.listdir(ruta_categoria) if f.endswith(extensiones_validas)]
-
-            if fotos:
-                st.write(f"### Mostrando fotos de: **{categoria_seleccionada}** ({len(fotos)} imágenes)")
+            if categoria_seleccionada != "-- Seleccione una categoría --":
+                ruta_categoria = os.path.join(ruta_galeria, categoria_seleccionada)
                 
-                # Desplegar fotos en una cuadrícula de 3 columnas
-                cols = st.columns(3)
-                for idx, foto in enumerate(fotos):
-                    col = cols[idx % 3]
-                    path_foto = os.path.join(ruta_categoria, foto)
-                    with col:
-                        st.image(path_foto, use_container_width=True)
+                # Obtener archivos de imagen (.jpg, .png, .jpeg)
+                extensiones_validas = ('.jpg', '.jpeg', '.png', '.JPG', '.JPEG', '.PNG')
+                fotos = [f for f in os.listdir(ruta_categoria) if f.endswith(extensiones_validas)]
+
+                st.divider()
+                st.write(f"### Mostrando fotos de: **{categoria_seleccionada}** ({len(fotos)} imágenes)")
+
+                if fotos:
+                    # Desplegar fotos en una cuadrícula de 3 columnas
+                    cols = st.columns(3)
+                    for idx, foto in enumerate(fotos):
+                        col = cols[idx % 3]
+                        path_foto = os.path.join(ruta_categoria, foto)
+                        with col:
+                            st.image(path_foto, use_container_width=True)
+                else:
+                    st.warning("No hay imágenes en esta categoría aún.")
             else:
-                st.warning("No hay imágenes en esta categoría aún.")
+                st.info("👆 Seleccione un tema arriba o use el menú lateral de la izquierda para volver al **Inicio**.")
         else:
             st.warning("No se encontraron subcarpetas dentro de 'galeria'.")
     else:
         st.error("La carpeta 'galeria' no existe en el proyecto.")
 
 # -------------------------------------------------------------
-# SECCIÓN 3: QUIÉNES SOMOS (NUEVA SECCIÓN)
+# SECCIÓN 3: QUIÉNES SOMOS
 # -------------------------------------------------------------
 elif opcion == "Quiénes somos":
     st.title("👥 Quiénes Somos")
@@ -81,8 +86,6 @@ elif opcion == "Quiénes somos":
     col1, col2 = st.columns(2)
 
     with col1:
-        # Si tiene la foto en la carpeta 'equipo', use la ruta. Si no hay foto aún, puede dejar un aviso.
-        # Ejemplo: st.image("equipo/integrante1.jpg", use_container_width=True)
         st.subheader("Nombre del Integrante 1")
         st.markdown("**Cargo / Rol:** Editor / Redactor")
         st.write(
@@ -90,7 +93,6 @@ elif opcion == "Quiénes somos":
         )
 
     with col2:
-        # Ejemplo: st.image("equipo/integrante2.jpg", use_container_width=True)
         st.subheader("Nombre del Integrante 2")
         st.markdown("**Cargo / Rol:** Colaborador / Fotografía")
         st.write(
