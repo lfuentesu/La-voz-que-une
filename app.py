@@ -9,11 +9,16 @@ st.set_page_config(
 )
 
 # -------------------------------------------------------------
+# INICIALIZACIÓN DEL TEXTO DESPLAZABLE (MENSAJE DINÁMICO)
+# -------------------------------------------------------------
+if "texto_desplazable" not in st.session_state:
+    st.session_state["texto_desplazable"] = "¡Bienvenidos a La Voz Que Une! Periódico digital comunitario de El Bosque. Infórmese sobre nuestras actividades, cultura y eventos vecinales."
+
+# -------------------------------------------------------------
 # BANNER PRINCIPAL
 # -------------------------------------------------------------
 ruta_banner = "banner.jpeg"
 
-# Verificación alternativa si la extensión cambia
 if not os.path.exists(ruta_banner):
     if os.path.exists("banner.jpg"):
         ruta_banner = "banner.jpg"
@@ -25,6 +30,20 @@ if os.path.exists(ruta_banner):
 
 st.title("📰 La Voz Que Une")
 st.caption("Periódico digital comunitario de El Bosque")
+
+# -------------------------------------------------------------
+# MARQUESINA / LETRAS DESPLAZABLES (HTML)
+# -------------------------------------------------------------
+st.markdown(
+    f"""
+    <div style="background-color: #f0f2f6; padding: 10px; border-radius: 5px; margin-bottom: 15px;">
+        <marquee behavior="scroll" direction="left" scrollamount="6" style="color: #1f2937; font-weight: bold; font-size: 16px;">
+            📢 {st.session_state['texto_desplazable']}
+        </marquee>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
 
 st.divider()
 
@@ -125,10 +144,18 @@ elif opcion == "Administración":
     clave = st.text_input("Ingrese la clave de acceso:", type="password")
     
     if clave:
-        # Puede cambiar esta clave según sus preferencias
-        if clave == "Bosque2026":
+        if clave == "lavoz123":
             st.success("Acceso concedido al Panel de Administración.")
-            st.write("Aquí se pueden gestionar publicaciones, artículos o avisos comunitarios.")
+            
+            st.subheader("📢 Modificar mensaje de la marquesina (letras desplazables)")
+            nuevo_texto = st.text_area(
+                "Escriba aquí el nuevo mensaje informativo que aparecerá en la portada:",
+                value=st.session_state["texto_desplazable"]
+            )
+            
+            if st.button("Guardar y actualizar marquesina"):
+                st.session_state["texto_desplazable"] = nuevo_texto
+                st.success("¡El mensaje ha sido actualizado correctamente! Vaya a 'Inicio' para ver los cambios.")
         else:
             st.error("Clave incorrecta. Intente nuevamente.")
 
