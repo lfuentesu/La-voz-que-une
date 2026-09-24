@@ -126,7 +126,7 @@ elif opcion == "Administración":
     
     if clave:
         # Puede cambiar esta clave según sus preferencias
-        if clave == "lavoz123":
+        if clave == "Bosque2026":
             st.success("Acceso concedido al Panel de Administración.")
             st.write("Aquí se pueden gestionar publicaciones, artículos o avisos comunitarios.")
         else:
