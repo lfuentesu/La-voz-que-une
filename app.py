@@ -9,12 +9,16 @@ st.set_page_config(
 )
 
 # -------------------------------------------------------------
-# BANNER PRINCIPAL (SE MUESTRA EN TODAS LAS SECCIONES)
+# BANNER PRINCIPAL
 # -------------------------------------------------------------
-# Si el banner está guardado como banner.jpg o banner.png en la raíz:
-ruta_banner = "banner.jpg"
+ruta_banner = "banner.jpeg"
+
+# Verificación alternativa si la extensión cambia
 if not os.path.exists(ruta_banner):
-    ruta_banner = "banner.png"
+    if os.path.exists("banner.jpg"):
+        ruta_banner = "banner.jpg"
+    elif os.path.exists("banner.png"):
+        ruta_banner = "banner.png"
 
 if os.path.exists(ruta_banner):
     st.image(ruta_banner, use_container_width=True)
@@ -30,7 +34,7 @@ st.divider()
 st.sidebar.title("Navegación")
 opcion = st.sidebar.radio(
     "Ir a:",
-    ["Inicio", "Galería", "Quiénes somos", "Contacto"]
+    ["Inicio", "Galería", "Quiénes somos", "Administración", "Contacto"]
 )
 
 # -------------------------------------------------------------
@@ -45,7 +49,7 @@ if opcion == "Inicio":
     
     st.divider()
     st.subheader("Últimas Novedades")
-    st.write("Seleccione en el menú de la izquierda (Navegación) para explorar las secciones de Galería, Quiénes somos o Contacto.")
+    st.write("Seleccione en el menú de la izquierda (Navegación) para explorar las secciones.")
 
 # -------------------------------------------------------------
 # SECCIÓN 2: GALERÍA DE FOTOS
@@ -60,7 +64,6 @@ elif opcion == "Galería":
         categorias = [c for c in os.listdir(ruta_galeria) if os.path.isdir(os.path.join(ruta_galeria, c))]
         
         if categorias:
-            # Selector desplegable con la opción por defecto
             opciones_categorias = ["-- Seleccione una categoría --"] + categorias
             categoria_seleccionada = st.selectbox("Seleccione un tema de la galería:", opciones_categorias)
 
@@ -112,7 +115,25 @@ elif opcion == "Quiénes somos":
         st.write("Reseña breve de la persona...")
 
 # -------------------------------------------------------------
-# SECCIÓN 4: CONTACTO
+# SECCIÓN 4: ADMINISTRACIÓN
+# -------------------------------------------------------------
+elif opcion == "Administración":
+    st.header("⚙️ Panel de Administración")
+    st.write("Espacio reservado para la gestión interna del portal comunitario.")
+    
+    st.divider()
+    clave = st.text_input("Ingrese la clave de acceso:", type="password")
+    
+    if clave:
+        # Puede cambiar esta clave según sus preferencias
+        if clave == "lavoz123":
+            st.success("Acceso concedido al Panel de Administración.")
+            st.write("Aquí se pueden gestionar publicaciones, artículos o avisos comunitarios.")
+        else:
+            st.error("Clave incorrecta. Intente nuevamente.")
+
+# -------------------------------------------------------------
+# SECCIÓN 5: CONTACTO
 # -------------------------------------------------------------
 elif opcion == "Contacto":
     st.header("✉️ Contacto")
