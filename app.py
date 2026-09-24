@@ -9,10 +9,31 @@ st.set_page_config(
 )
 
 # -------------------------------------------------------------
-# INICIALIZACIÓN DEL TEXTO DESPLAZABLE (MENSAJE DINÁMICO)
+# INICIALIZACIÓN DE VARIABLES EN SESSION_STATE
 # -------------------------------------------------------------
 if "texto_desplazable" not in st.session_state:
     st.session_state["texto_desplazable"] = "¡Bienvenidos a La Voz Que Une! Periódico digital comunitario de El Bosque. Infórmese sobre nuestras actividades, cultura y eventos vecinales."
+
+if "texto_quienes_somos" not in st.session_state:
+    st.session_state["texto_quienes_somos"] = """
+### Nuestra Historia y Propósito
+
+**La Voz Que Une** es una iniciativa comunitaria y ciudadana nacida en la comuna de El Bosque. Nuestro objetivo principal es rescatar la memoria local, difundir las actividades de nuestros vecinos y crear un espacio abierto para la cultura, las artes y el encuentro.
+
+---
+
+### El Equipo de Trabajo
+
+Nuestro equipo está conformado por vecinos, educadores, gestores culturales y colaboradores comprometidos con la difusión comunitaria:
+
+* **Dirección y Edición General:** Equipo Editorial *La Voz Que Une*.
+* **Redacción y Colaboraciones:** Vecinos y organizaciones comunitarias de El Bosque.
+* **Fotografía y Registro Histórico:** Archivo comunitario y aportes de los lectores.
+
+---
+
+*Agradecemos a todas las instituciones, talleres y personas que hacen posible mantener vivo este medio independiente.*
+"""
 
 # -------------------------------------------------------------
 # BANNER PRINCIPAL
@@ -32,7 +53,7 @@ st.title("📰 La Voz Que Une")
 st.caption("Periódico digital comunitario de El Bosque")
 
 # -------------------------------------------------------------
-# MARQUESINA / LETRAS DESPLAZABLES (HTML)
+# MARQUESINA / LETRAS DESPLAZABLES
 # -------------------------------------------------------------
 st.markdown(
     f"""
@@ -112,26 +133,23 @@ elif opcion == "Galería":
         st.error("La carpeta 'galeria' no existe en el proyecto.")
 
 # -------------------------------------------------------------
-# SECCIÓN 3: QUIÉNES SOMOS
+# SECCIÓN 3: QUIÉNES SOMOS (FORMATO EDITORIAL / TEXTO)
 # -------------------------------------------------------------
 elif opcion == "Quiénes somos":
     st.header("👥 Quiénes Somos")
-    st.markdown("### El equipo detrás de *La Voz Que Une*")
-    st.write("Somos un grupo de vecinos y colaboradores comprometidos con la difusión comunitaria.")
+    
+    col_texto, col_imagen = st.columns([2, 1])
 
-    st.divider()
+    with col_texto:
+        st.markdown(st.session_state["texto_quienes_somos"])
 
-    col1, col2 = st.columns(2)
-
-    with col1:
-        st.subheader("Nombre del Integrante 1")
-        st.markdown("**Cargo / Rol:** Editor / Redactor")
-        st.write("Reseña breve de la persona...")
-
-    with col2:
-        st.subheader("Nombre del Integrante 2")
-        st.markdown("**Cargo / Rol:** Colaborador / Fotografía")
-        st.write("Reseña breve de la persona...")
+    with col_imagen:
+        # Si tiene una imagen institucional, afiche o foto del barrio, puede ponerla aquí
+        ruta_imagen_comunidad = "galeria/VARIOS"
+        if os.path.exists(ruta_imagen_comunidad):
+            fotos_varias = [f for f in os.listdir(ruta_imagen_comunidad) if f.endswith(('.jpg', '.jpeg', '.png'))]
+            if fotos_varias:
+                st.image(os.path.join(ruta_imagen_comunidad, fotos_varias[0]), caption="Comunidad de El Bosque", use_container_width=True)
 
 # -------------------------------------------------------------
 # SECCIÓN 4: ADMINISTRACIÓN
@@ -144,18 +162,33 @@ elif opcion == "Administración":
     clave = st.text_input("Ingrese la clave de acceso:", type="password")
     
     if clave:
+        # Reemplace 'lavoz123' por la clave que usted definió si es distinta
         if clave == "Bosque2026":
             st.success("Acceso concedido al Panel de Administración.")
             
             st.subheader("📢 Modificar mensaje de la marquesina (letras desplazables)")
             nuevo_texto = st.text_area(
-                "Escriba aquí el nuevo mensaje informativo que aparecerá en la portada:",
-                value=st.session_state["texto_desplazable"]
+                "Escriba aquí el nuevo mensaje informativo para la portada:",
+                value=st.session_state["texto_desplazable"],
+                height=100
             )
             
-            if st.button("Guardar y actualizar marquesina"):
+            if st.button("Guardar marquesina"):
                 st.session_state["texto_desplazable"] = nuevo_texto
-                st.success("¡El mensaje ha sido actualizado correctamente! Vaya a 'Inicio' para ver los cambios.")
+                st.success("¡Marquesina actualizada!")
+
+            st.divider()
+
+            st.subheader("📝 Editar contenido de 'Quiénes somos'")
+            nuevo_quienes_somos = st.text_area(
+                "Modifique la presentación del equipo o la historia del proyecto:",
+                value=st.session_state["texto_quienes_somos"],
+                height=250
+            )
+
+            if st.button("Guardar texto de Quiénes somos"):
+                st.session_state["texto_quienes_somos"] = nuevo_quienes_somos
+                st.success("¡Sección Quiénes somos actualizada correctamente!")
         else:
             st.error("Clave incorrecta. Intente nuevamente.")
 
