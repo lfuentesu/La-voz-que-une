@@ -144,7 +144,7 @@ elif opcion == "Administración":
     clave = st.text_input("Ingrese la clave de acceso:", type="password")
     
     if clave:
-        if clave == "lavoz123":
+        if clave == "Bosque2026":
             st.success("Acceso concedido al Panel de Administración.")
             
             st.subheader("📢 Modificar mensaje de la marquesina (letras desplazables)")
