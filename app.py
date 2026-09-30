@@ -79,13 +79,15 @@ st.title("📰 La Voz Que Une")
 st.caption("Periódico digital comunitario de la Población El Bosque 1 - Huechuraba")
 
 # -------------------------------------------------------------
-# MARQUESINA / LETRAS DESPLAZABLES
+# MARQUESINA / LETRAS DESPLAZABLES (LIMPIA DE SÍMBOLOS EXTRAÑOS)
 # -------------------------------------------------------------
+texto_marquesina_limpio = marquesina_actual.replace("<", "").replace(">", "").strip()
+
 st.markdown(
     f"""
     <div style="background-color: #f0f2f6; padding: 10px; border-radius: 5px; margin-bottom: 15px;">
         <marquee behavior="scroll" direction="left" scrollamount="6" style="color: #1f2937; font-weight: bold; font-size: 16px;">
-            📢 {marquesina_actual}
+            📢 {texto_marquesina_limpio}
         </marquee>
     </div>
     """,
@@ -196,8 +198,8 @@ elif opcion == "Administración":
     clave = st.text_input("Ingrese la clave de acceso:", type="password")
     
     if clave:
-        # Cambie 'lavoz123' por la clave personalizada que usted asignó
-        if clave == "Bosque2026":
+        # Recuerde verificar si mantiene "lavoz123" o la clave personalizada que usted definió
+        if clave == "lavoz123":
             st.success("Acceso concedido al Panel de Administración.")
 
             sub_tab1, sub_tab2, sub_tab3, sub_tab4 = st.tabs([
@@ -207,9 +209,7 @@ elif opcion == "Administración":
                 "🖼️ Subir Fotos a Galería"
             ])
 
-            # -------------------------------------------------
             # PESTAÑA 1: PUBLICAR NUEVA NOTICIA
-            # -------------------------------------------------
             with sub_tab1:
                 st.subheader("Publicar un nuevo artículo o noticia en la portada")
                 titulo_noticia = st.text_input("Título de la publicación:")
@@ -235,9 +235,7 @@ elif opcion == "Administración":
                         st.success("¡Noticia publicada con éxito! Ya se encuentra visible en la sección Inicio.")
                         st.rerun()
 
-            # -------------------------------------------------
             # PESTAÑA 2: EDITAR QUIÉNES SOMOS
-            # -------------------------------------------------
             with sub_tab2:
                 st.subheader("Editar la presentación de 'Quiénes somos'")
                 nuevo_quienes = st.text_area(
@@ -250,24 +248,22 @@ elif opcion == "Administración":
                     st.success("¡Texto guardado permanentemente en el servidor!")
                     st.rerun()
 
-            # -------------------------------------------------
             # PESTAÑA 3: MODIFICAR MARQUESINA
-            # -------------------------------------------------
             with sub_tab3:
                 st.subheader("Modificar mensaje de las letras desplazables")
                 nueva_marquesina = st.text_area(
-                    "Escriba el nuevo aviso informativo:",
+                    "Escriba el nuevo aviso informativo (se guardará sin caracteres extraños):",
                     value=marquesina_actual,
                     height=100
                 )
                 if st.button("💾 Guardar Marquesina Permanentemente"):
-                    guardar_texto(ARCH_MARQUESINA, nueva_marquesina)
-                    st.success("¡Marquesina actualizada y guardada permanentemente!")
+                    # Limpiamos posibles símbolos extraños antes de guardar
+                    texto_limpio_guardar = nueva_marquesina.replace("<", "").replace(">", "").strip()
+                    guardar_texto(ARCH_MARQUESINA, texto_limpio_guardar)
+                    st.success("¡Marquesina actualizada y guardada de forma limpia!")
                     st.rerun()
 
-            # -------------------------------------------------
             # PESTAÑA 4: SUBIR FOTOS A LA GALERÍA
-            # -------------------------------------------------
             with sub_tab4:
                 st.subheader("Subir imágenes directamente a la Galería")
                 if os.path.exists("galeria"):
