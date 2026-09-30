@@ -197,7 +197,7 @@ elif opcion == "Administración":
     
     if clave:
         # Cambie 'lavoz123' por la clave personalizada que usted asignó
-        if clave == "lavoz123":
+        if clave == "Bosque2026":
             st.success("Acceso concedido al Panel de Administración.")
 
             sub_tab1, sub_tab2, sub_tab3, sub_tab4 = st.tabs([
