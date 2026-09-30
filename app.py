@@ -1,5 +1,6 @@
 ﻿import streamlit as st
 import os
+import json
 from datetime import datetime
 
 # Configuración de la página
@@ -10,14 +11,38 @@ st.set_page_config(
 )
 
 # -------------------------------------------------------------
-# INICIALIZACIÓN DE VARIABLES EN SESSION_STATE
+# FUNCIONES PARA LECTURA Y ESCRITURA EN ARCHIVOS DURA/PERMANENTE
 # -------------------------------------------------------------
-if "texto_desplazable" not in st.session_state:
-    st.session_state["texto_desplazable"] = "¡Bienvenidos a La Voz Que Une! Periódico digital comunitario de la Población El Bosque 1, Huechuraba. Infórmese sobre nuestras actividades, cultura y eventos vecinales."
+ARCH_MARQUESINA = "marquesina.txt"
+ARCH_QUIENES = "quienes_somos.txt"
+ARCH_NOTICIAS = "noticias.json"
 
-if "texto_quienes_somos" not in st.session_state:
-    st.session_state["texto_quienes_somos"] = """
-### Nuestra Historia y Propósito
+def cargar_texto(archivo, texto_defecto):
+    if os.path.exists(archivo):
+        with open(archivo, "r", encoding="utf-8") as f:
+            return f.read()
+    return texto_defecto
+
+def guardar_texto(archivo, contenido):
+    with open(archivo, "w", encoding="utf-8") as f:
+        f.write(contenido)
+
+def cargar_noticias():
+    if os.path.exists(ARCH_NOTICIAS):
+        try:
+            with open(ARCH_NOTICIAS, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except:
+            return []
+    return []
+
+def guardar_noticias(lista_noticias):
+    with open(ARCH_NOTICIAS, "w", encoding="utf-8") as f:
+        json.dump(lista_noticias, f, ensure_ascii=False, indent=4)
+
+# Textos por defecto si los archivos no existen aún
+texto_marquesina_defecto = "¡Bienvenidos a La Voz Que Une! Periódico digital comunitario de la Población El Bosque 1, Huechuraba."
+texto_quienes_defecto = """### Nuestra Historia y Propósito
 
 **La Voz Que Une** es una iniciativa comunitaria y ciudadana nacida en la **Población El Bosque 1, comuna de Huechuraba**. Nuestro objetivo principal es rescatar la memoria local, difundir las actividades de nuestros vecinos y crear un espacio abierto para la cultura, las artes y el encuentro comunitario.
 
@@ -30,17 +55,17 @@ Nuestro equipo está conformado por vecinos, educadores, gestores culturales y c
 * **Dirección y Edición General:** Equipo Editorial *La Voz Que Une*.
 * **Redacción y Colaboraciones:** Vecinos y organizaciones comunitarias de la Población El Bosque 1.
 * **Fotografía y Registro Histórico:** Archivo comunitario y aportes de los lectores de Huechuraba.
-
----
-
-*Agradecemos a todas las instituciones, talleres y vecinos que hacen posible mantener vivo este medio independiente.*
 """
+
+# Cargar contenidos actuales desde los archivos
+marquesina_actual = cargar_texto(ARCH_MARQUESINA, texto_marquesina_defecto)
+quienes_actual = cargar_texto(ARCH_QUIENES, texto_quienes_defecto)
+noticias_actuales = cargar_noticias()
 
 # -------------------------------------------------------------
 # BANNER PRINCIPAL
 # -------------------------------------------------------------
 ruta_banner = "banner.jpeg"
-
 if not os.path.exists(ruta_banner):
     if os.path.exists("banner.jpg"):
         ruta_banner = "banner.jpg"
@@ -60,7 +85,7 @@ st.markdown(
     f"""
     <div style="background-color: #f0f2f6; padding: 10px; border-radius: 5px; margin-bottom: 15px;">
         <marquee behavior="scroll" direction="left" scrollamount="6" style="color: #1f2937; font-weight: bold; font-size: 16px;">
-            📢 {st.session_state['texto_desplazable']}
+            📢 {marquesina_actual}
         </marquee>
     </div>
     """,
@@ -79,7 +104,7 @@ opcion = st.sidebar.radio(
 )
 
 # -------------------------------------------------------------
-# SECCIÓN 1: INICIO
+# SECCIÓN 1: INICIO (DESPLIEGUE DE NOTICIAS Y PUBLICACIONES)
 # -------------------------------------------------------------
 if opcion == "Inicio":
     st.header("Bienvenido a nuestro portal comunitario")
@@ -89,8 +114,17 @@ if opcion == "Inicio":
     )
     
     st.divider()
-    st.subheader("Últimas Novedades")
-    st.write("Seleccione en el menú de la izquierda (Navegación) para explorar las secciones.")
+    st.subheader("📰 Publicaciones y Noticias Comunitarias")
+
+    if noticias_actuales:
+        # Mostrar las noticias de más reciente a más antigua
+        for idx, noti in enumerate(reversed(noticias_actuales)):
+            st.markdown(f"### {noti['titulo']}")
+            st.caption(f"📅 *Publicado el {noti['fecha']}* | 🏷️ **Categoría:** {noti['categoria']}")
+            st.write(noti['contenido'])
+            st.divider()
+    else:
+        st.info("Aún no hay publicaciones guardadas. Puede agregar la primera desde el Panel de Administración.")
 
 # -------------------------------------------------------------
 # SECCIÓN 2: GALERÍA DE FOTOS
@@ -142,7 +176,7 @@ elif opcion == "Quiénes somos":
     col_texto, col_imagen = st.columns([2, 1])
 
     with col_texto:
-        st.markdown(st.session_state["texto_quienes_somos"])
+        st.markdown(quienes_actual)
 
     with col_imagen:
         ruta_imagen_comunidad = "galeria/VARIOS"
@@ -152,67 +186,117 @@ elif opcion == "Quiénes somos":
                 st.image(os.path.join(ruta_imagen_comunidad, fotos_varias[0]), caption="Comunidad El Bosque 1 - Huechuraba", use_container_width=True)
 
 # -------------------------------------------------------------
-# SECCIÓN 4: ADMINISTRACIÓN
+# SECCIÓN 4: PANEL DE ADMINISTRACIÓN
 # -------------------------------------------------------------
 elif opcion == "Administración":
     st.header("⚙️ Panel de Administración")
-    st.write("Espacio reservado para la gestión interna del portal comunitario.")
+    st.write("Gestión interna de contenidos, publicaciones y noticias.")
     
     st.divider()
     clave = st.text_input("Ingrese la clave de acceso:", type="password")
     
     if clave:
-        # Coloque aquí la clave personalizada que usted definió
-        if clave == "Bosque2026":
+        # Cambie 'lavoz123' por la clave personalizada que usted asignó
+        if clave == "lavoz123":
             st.success("Acceso concedido al Panel de Administración.")
-            
-            st.subheader("📢 Modificar mensaje de la marquesina (letras desplazables)")
-            nuevo_texto = st.text_area(
-                "Escriba aquí el nuevo mensaje informativo para la portada:",
-                value=st.session_state["texto_desplazable"],
-                height=100
-            )
-            
-            if st.button("Guardar marquesina"):
-                st.session_state["texto_desplazable"] = nuevo_texto
-                st.success("¡Marquesina actualizada!")
 
-            st.divider()
+            sub_tab1, sub_tab2, sub_tab3, sub_tab4 = st.tabs([
+                "📝 Publicar Noticia", 
+                "👤 Editar Quiénes Somos", 
+                "📢 Modificar Marquesina",
+                "🖼️ Subir Fotos a Galería"
+            ])
 
-            st.subheader("📝 Editar contenido de 'Quiénes somos'")
-            nuevo_quienes_somos = st.text_area(
-                "Modifique la presentación del equipo o la historia del proyecto:",
-                value=st.session_state["texto_quienes_somos"],
-                height=250
-            )
+            # -------------------------------------------------
+            # PESTAÑA 1: PUBLICAR NUEVA NOTICIA
+            # -------------------------------------------------
+            with sub_tab1:
+                st.subheader("Publicar un nuevo artículo o noticia en la portada")
+                titulo_noticia = st.text_input("Título de la publicación:")
+                cat_noticia = st.selectbox(
+                    "Sección / Categoría de la publicación:",
+                    ["Noticias Locales", "Cultura y Arte", "Deportes", "Anuncios Vecinales", "Memoria Histórica"]
+                )
+                cuerpo_noticia = st.text_area("Contenido del artículo:", height=200)
 
-            if st.button("Guardar texto de Quiénes somos"):
-                st.session_state["texto_quienes_somos"] = nuevo_quienes_somos
-                st.success("¡Sección Quiénes somos actualizada correctamente!")
+                if st.button("📌 Publicar en la Web"):
+                    if titulo_noticia.strip() == "" or cuerpo_noticia.strip() == "":
+                        st.error("Debe ingresar un título y contenido para publicar.")
+                    else:
+                        fecha_hoy = datetime.now().strftime("%d/%m/%Y")
+                        nueva_pub = {
+                            "titulo": titulo_noticia,
+                            "categoria": cat_noticia,
+                            "contenido": cuerpo_noticia,
+                            "fecha": fecha_hoy
+                        }
+                        noticias_actuales.append(nueva_pub)
+                        guardar_noticias(noticias_actuales)
+                        st.success("¡Noticia publicada con éxito! Ya se encuentra visible en la sección Inicio.")
+                        st.rerun()
 
-            st.divider()
+            # -------------------------------------------------
+            # PESTAÑA 2: EDITAR QUIÉNES SOMOS
+            # -------------------------------------------------
+            with sub_tab2:
+                st.subheader("Editar la presentación de 'Quiénes somos'")
+                nuevo_quienes = st.text_area(
+                    "Modifique la historia o presentación del equipo:",
+                    value=quienes_actual,
+                    height=250
+                )
+                if st.button("💾 Guardar 'Quiénes Somos' Permanentemente"):
+                    guardar_texto(ARCH_QUIENES, nuevo_quienes)
+                    st.success("¡Texto guardado permanentemente en el servidor!")
+                    st.rerun()
 
-            st.subheader("📬 Fotografías e Imágenes Recibidas de los Vecinos")
-            carpeta_envios = "mensajes_recibidos"
-            if os.path.exists(carpeta_envios):
-                archivos_recibidos = [f for f in os.listdir(carpeta_envios) if f.endswith(('.jpg', '.jpeg', '.png'))]
-                if archivos_recibidos:
-                    st.write(f"Se han recibido **{len(archivos_recibidos)}** archivos adjuntos:")
-                    cols_recibidas = st.columns(3)
-                    for idx, arch in enumerate(archivos_recibidos):
-                        col = cols_recibidas[idx % 3]
-                        with col:
-                            st.image(os.path.join(carpeta_envios, arch), caption=arch, use_container_width=True)
+            # -------------------------------------------------
+            # PESTAÑA 3: MODIFICAR MARQUESINA
+            # -------------------------------------------------
+            with sub_tab3:
+                st.subheader("Modificar mensaje de las letras desplazables")
+                nueva_marquesina = st.text_area(
+                    "Escriba el nuevo aviso informativo:",
+                    value=marquesina_actual,
+                    height=100
+                )
+                if st.button("💾 Guardar Marquesina Permanentemente"):
+                    guardar_texto(ARCH_MARQUESINA, nueva_marquesina)
+                    st.success("¡Marquesina actualizada y guardada permanentemente!")
+                    st.rerun()
+
+            # -------------------------------------------------
+            # PESTAÑA 4: SUBIR FOTOS A LA GALERÍA
+            # -------------------------------------------------
+            with sub_tab4:
+                st.subheader("Subir imágenes directamente a la Galería")
+                if os.path.exists("galeria"):
+                    cats_galeria = [c for c in os.listdir("galeria") if os.path.isdir(os.path.join("galeria", c))]
+                    if cats_galeria:
+                        cat_destino = st.selectbox("Seleccione la carpeta destino:", cats_galeria)
+                        fotos_subir = st.file_uploader(
+                            "Seleccione las imágenes a subir:",
+                            type=["jpg", "jpeg", "png"],
+                            accept_multiple_files=True
+                        )
+                        if st.button("📤 Guardar Fotos en Galería"):
+                            if fotos_subir:
+                                ruta_destino = os.path.join("galeria", cat_destino)
+                                for f_img in fotos_subir:
+                                    ruta_final = os.path.join(ruta_destino, f_img.name)
+                                    with open(ruta_final, "wb") as file_out:
+                                        file_out.write(f_img.getbuffer())
+                                st.success(f"¡Se subieron {len(fotos_subir)} imágenes a la carpeta {cat_destino}!")
+                            else:
+                                st.warning("Por favor, seleccione al menos una imagen.")
                 else:
-                    st.info("Aún no se han subido imágenes a través del formulario de contacto.")
-            else:
-                st.info("La carpeta de mensajes recibidos se creará automáticamente cuando los vecinos envíen su primer archivo.")
+                    st.error("La carpeta 'galeria' no se encuentra.")
 
         else:
             st.error("Clave incorrecta. Intente nuevamente.")
 
 # -------------------------------------------------------------
-# SECCIÓN 5: CONTACTO (FORMULARIO CON CARGA DE IMÁGENES)
+# SECCIÓN 5: CONTACTO
 # -------------------------------------------------------------
 elif opcion == "Contacto":
     st.header("✉️ Contacto y Envío de Material")
@@ -244,11 +328,9 @@ elif opcion == "Contacto":
         if nombre.strip() == "" or contacto_vecino.strip() == "" or mensaje.strip() == "":
             st.error("Por favor, complete los campos obligatorios (Nombre, Contacto y Mensaje).")
         else:
-            # Crear carpeta de guardado de envíos si no existe
             carpeta_envios = "mensajes_recibidos"
             os.makedirs(carpeta_envios, exist_ok=True)
 
-            # Si el vecino subió fotos, se guardan con fecha y nombre
             if archivos_adjuntos:
                 for archivo in archivos_adjuntos:
                     nombre_limpio = nombre.replace(" ", "_").lower()
