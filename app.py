@@ -3,6 +3,7 @@ import os
 import json
 import pandas as pd
 from datetime import datetime
+from PIL import Image, ImageOps
 
 # Configuración de la página
 st.set_page_config(
@@ -10,6 +11,17 @@ st.set_page_config(
     page_icon="📰",
     layout="wide"
 )
+
+# -------------------------------------------------------------
+# FUNCIÓN PARA ABRIR E IMÁGENES CON ROTACIÓN CORRECTA (EXIF)
+# -------------------------------------------------------------
+def abrir_imagen_corregida(path_imagen):
+    try:
+        image = Image.open(path_imagen)
+        image = ImageOps.exif_transpose(image)
+        return image
+    except Exception:
+        return path_imagen
 
 # -------------------------------------------------------------
 # ARCHIVOS DE ALMACENAMIENTO PERMANENTE
@@ -76,7 +88,7 @@ if not os.path.exists(ruta_banner):
         ruta_banner = "banner.png"
 
 if os.path.exists(ruta_banner):
-    st.image(ruta_banner, use_container_width=True)
+    st.image(abrir_imagen_corregida(ruta_banner), use_container_width=True)
 
 st.title("📰 La Voz Que Une")
 st.caption("Periódico digital comunitario de la Población El Bosque 1 - Huechuraba")
@@ -127,7 +139,7 @@ if opcion == "Inicio":
             st.caption(f"📅 *Publicado el {noti['fecha']}* | 🏷️ **Categoría:** {noti.get('categoria', 'General')}")
             st.write(noti['contenido'])
             if "imagen" in noti and noti["imagen"] and os.path.exists(noti["imagen"]):
-                st.image(noti["imagen"], use_container_width=True)
+                st.image(abrir_imagen_corregida(noti["imagen"]), use_container_width=True)
             st.divider()
     else:
         st.info("Aún no hay publicaciones guardadas. Puede agregar la primera desde el Panel de Administración.")
@@ -163,7 +175,7 @@ elif opcion == "Galería":
                         col = cols[idx % 3]
                         path_foto = os.path.join(ruta_categoria, foto)
                         with col:
-                            st.image(path_foto, use_container_width=True)
+                            st.image(abrir_imagen_corregida(path_foto), use_container_width=True)
                 else:
                     st.warning("No hay imágenes en esta categoría aún.")
             else:
@@ -189,7 +201,7 @@ elif opcion == "Quiénes somos":
         if os.path.exists(ruta_imagen_comunidad):
             fotos_varias = [f for f in os.listdir(ruta_imagen_comunidad) if f.endswith(('.jpg', '.jpeg', '.png'))]
             if fotos_varias:
-                st.image(os.path.join(ruta_imagen_comunidad, fotos_varias[0]), caption="Comunidad El Bosque 1 - Huechuraba", use_container_width=True)
+                st.image(abrir_imagen_corregida(os.path.join(ruta_imagen_comunidad, fotos_varias[0])), caption="Comunidad El Bosque 1 - Huechuraba", use_container_width=True)
 
 # -------------------------------------------------------------
 # SECCIÓN 4: PANEL DE ADMINISTRACIÓN
@@ -205,23 +217,22 @@ elif opcion == "Administración":
         if clave == "Bosque2026":
             st.success("Acceso concedido al Panel de Administración.")
 
-            sub_tab1, sub_tab2, sub_tab3, sub_tab4, sub_tab5 = st.tabs([
+            sub_tab1, sub_tab2, sub_tab3, sub_tab4, sub_tab5, sub_tab6 = st.tabs([
                 "📬 Mensajes y Moderación",
                 "📝 Publicar Noticia", 
                 "👤 Editar Quiénes Somos", 
                 "📢 Modificar Marquesina",
-                "🖼️ Subir Fotos a Galería"
+                "🖼️ Subir Fotos",
+                "🗑️ Gestionar / Eliminar Galería"
             ])
 
-            # PESTAÑA 1: MODERACIÓN DE MENSAJES RECIBIDOS + BOTÓN DE DESCARGA
+            # PESTAÑA 1: MODERACIÓN DE MENSAJES RECIBIDOS
             with sub_tab1:
                 st.subheader("📬 Envíos y Aportes Recibidos de los Vecinos")
                 st.write("Revise los mensajes enviados desde la sección Contacto y decida si aprobarlos para la portada o descartarlos.")
 
                 if mensajes_recibidos:
-                    # Preparar los datos para la descarga en CSV / Excel
                     df_mensajes = pd.DataFrame(mensajes_recibidos)
-                    # Renombrar columnas para que la planilla se vea clara en español
                     columnas_renombradas = {
                         "fecha": "Fecha y Hora",
                         "nombre": "Nombre del Vecino",
@@ -234,7 +245,6 @@ elif opcion == "Administración":
                     
                     csv_data = df_exportar.to_csv(index=False, encoding="utf-8-sig")
 
-                    # Botón de Descarga
                     st.download_button(
                         label="📥 Descargar historial de mensajes (Formato CSV / Excel)",
                         data=csv_data,
@@ -251,7 +261,7 @@ elif opcion == "Administración":
                             
                             ruta_img = msg.get("imagen")
                             if ruta_img and os.path.exists(ruta_img):
-                                st.image(ruta_img, width=300, caption="Imagen adjunta por el vecino")
+                                st.image(abrir_imagen_corregida(ruta_img), width=300, caption="Imagen adjunta por el vecino")
 
                             col_btn1, col_btn2 = st.columns([1, 1])
 
@@ -339,6 +349,19 @@ elif opcion == "Administración":
                 st.subheader("Subir imágenes directamente a la Galería")
                 if os.path.exists("galeria"):
                     cats_galeria = [c for c in os.listdir("galeria") if os.path.isdir(os.path.join("galeria", c))]
+                    
+                    # Opción para crear nueva subcarpeta
+                    nueva_carpeta = st.text_input("➕ Crear nueva categoría/carpeta en la Galería (opcional):")
+                    if st.button("Crear Carpeta"):
+                        if nueva_carpeta.strip():
+                            nombre_carp_limpio = nueva_carpeta.strip().upper()
+                            os.makedirs(os.path.join("galeria", nombre_carp_limpio), exist_ok=True)
+                            st.success(f"¡Carpeta '{nombre_carp_limpio}' creada correctamente!")
+                            st.rerun()
+
+                    st.divider()
+
+                    cats_galeria = [c for c in os.listdir("galeria") if os.path.isdir(os.path.join("galeria", c))]
                     if cats_galeria:
                         cat_destino = st.selectbox("Seleccione la carpeta destino:", cats_galeria)
                         fotos_subir = st.file_uploader(
@@ -354,10 +377,46 @@ elif opcion == "Administración":
                                     with open(ruta_final, "wb") as file_out:
                                         file_out.write(f_img.getbuffer())
                                 st.success(f"¡Se subieron {len(fotos_subir)} imágenes a la carpeta {cat_destino}!")
+                                st.rerun()
                             else:
                                 st.warning("Por favor, seleccione al menos una imagen.")
                 else:
                     st.error("La carpeta 'galeria' no se encuentra.")
+
+            # PESTAÑA 6: GESTIONAR Y ELIMINAR FOTOS Y CARPETAS
+            with sub_tab6:
+                st.subheader("🗑️ Eliminar Fotos o Carpetas de la Galería")
+                if os.path.exists("galeria"):
+                    cats_galeria = [c for c in os.listdir("galeria") if os.path.isdir(os.path.join("galeria", c))]
+                    if cats_galeria:
+                        cat_gestionar = st.selectbox("Seleccione la categoría que desea administrar:", cats_galeria, key="gest_cat")
+                        ruta_cat_gest = os.path.join("galeria", cat_gestionar)
+                        
+                        fotos_en_cat = [f for f in os.listdir(ruta_cat_gest) if f.endswith(('.jpg', '.jpeg', '.png', '.JPG', '.JPEG', '.PNG'))]
+
+                        st.write(f"Imágenes en **{cat_gestionar}**: ({len(fotos_en_cat)} imágenes)")
+
+                        if fotos_en_cat:
+                            cols_del = st.columns(3)
+                            for idx, f_del in enumerate(fotos_en_cat):
+                                col = cols_del[idx % 3]
+                                path_del = os.path.join(ruta_cat_gest, f_del)
+                                with col:
+                                    st.image(abrir_imagen_corregida(path_del), use_container_width=True)
+                                    if st.button(f"🗑️ Borrar {f_del[:15]}...", key=f"del_img_{idx}"):
+                                        os.remove(path_del)
+                                        st.success(f"Imagen '{f_del}' eliminada.")
+                                        st.rerun()
+                        else:
+                            st.info("Esta carpeta está vacía.")
+
+                        st.divider()
+                        st.warning("⚠️ Zona de Eliminación de Carpetas Completas")
+                        if st.button(f"❌ Borrar carpeta completa '{cat_gestionar}'", help="Borrará la carpeta y todas las imágenes dentro de ella."):
+                            import shutil
+                            shutil.rmtree(ruta_cat_gest)
+                            st.success(f"Carpeta '{cat_gestionar}' eliminada por completo.")
+                            st.rerun()
 
         else:
             st.error("Clave incorrecta. Intente nuevamente.")
