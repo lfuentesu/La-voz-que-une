@@ -1,6 +1,7 @@
 ﻿import streamlit as st
 import os
 import json
+import pandas as pd
 from datetime import datetime
 
 # Configuración de la página
@@ -212,12 +213,37 @@ elif opcion == "Administración":
                 "🖼️ Subir Fotos a Galería"
             ])
 
-            # PESTAÑA 1: MODERACIÓN DE MENSAJES RECIBIDOS
+            # PESTAÑA 1: MODERACIÓN DE MENSAJES RECIBIDOS + BOTÓN DE DESCARGA
             with sub_tab1:
                 st.subheader("📬 Envíos y Aportes Recibidos de los Vecinos")
                 st.write("Revise los mensajes enviados desde la sección Contacto y decida si aprobarlos para la portada o descartarlos.")
 
                 if mensajes_recibidos:
+                    # Preparar los datos para la descarga en CSV / Excel
+                    df_mensajes = pd.DataFrame(mensajes_recibidos)
+                    # Renombrar columnas para que la planilla se vea clara en español
+                    columnas_renombradas = {
+                        "fecha": "Fecha y Hora",
+                        "nombre": "Nombre del Vecino",
+                        "contacto": "Contacto (Teléfono/Correo)",
+                        "asunto": "Motivo / Asunto",
+                        "mensaje": "Mensaje Completo"
+                    }
+                    cols_existentes = [c for c in columnas_renombradas.keys() if c in df_mensajes.columns]
+                    df_exportar = df_mensajes[cols_existentes].rename(columns=columnas_renombradas)
+                    
+                    csv_data = df_exportar.to_csv(index=False, encoding="utf-8-sig")
+
+                    # Botón de Descarga
+                    st.download_button(
+                        label="📥 Descargar historial de mensajes (Formato CSV / Excel)",
+                        data=csv_data,
+                        file_name=f"mensajes_recibidos_{datetime.now().strftime('%Y%m%d')}.csv",
+                        mime="text/csv",
+                        help="Haga clic para descargar todos los mensajes en una planilla compatible con Excel o Google Sheets."
+                    )
+                    st.divider()
+
                     for i, msg in enumerate(mensajes_recibidos):
                         with st.expander(f"📩 {msg.get('asunto', 'Sin asunto')} — Enviado por: {msg.get('nombre', 'Anónimo')} ({msg.get('fecha', '')})"):
                             st.write(f"**Contacto:** {msg.get('contacto', 'No indicado')}")
@@ -241,7 +267,6 @@ elif opcion == "Administración":
                                     noticias_actuales.append(nueva_noticia)
                                     guardar_json(ARCH_NOTICIAS, noticias_actuales)
                                     
-                                    # Se quita de la lista de pendientes
                                     mensajes_recibidos.pop(i)
                                     guardar_json(ARCH_MENSAJES, mensajes_recibidos)
                                     st.success("¡Publicación aprobada y agregada a la sección Inicio!")
@@ -338,7 +363,7 @@ elif opcion == "Administración":
             st.error("Clave incorrecta. Intente nuevamente.")
 
 # -------------------------------------------------------------
-# SECCIÓN 5: CONTACTO (ENVÍO Y REGISTRO DE MENSAJES)
+# SECCIÓN 5: CONTACTO
 # -------------------------------------------------------------
 elif opcion == "Contacto":
     st.header("✉️ Contacto y Envío de Material")
@@ -384,7 +409,6 @@ elif opcion == "Contacto":
                         f.write(archivo.getbuffer())
                     ruta_imagen_guardada = ruta_guardado
 
-            # Guardar el mensaje en el registro de moderación
             nuevo_mensaje = {
                 "nombre": nombre,
                 "contacto": contacto_vecino,
