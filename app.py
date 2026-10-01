@@ -11,11 +11,12 @@ st.set_page_config(
 )
 
 # -------------------------------------------------------------
-# FUNCIONES PARA LECTURA Y ESCRITURA EN ARCHIVOS DURA/PERMANENTE
+# ARCHIVOS DE ALMACENAMIENTO PERMANENTE
 # -------------------------------------------------------------
 ARCH_MARQUESINA = "marquesina.txt"
 ARCH_QUIENES = "quienes_somos.txt"
 ARCH_NOTICIAS = "noticias.json"
+ARCH_MENSAJES = "mensajes.json"
 
 def cargar_texto(archivo, texto_defecto):
     if os.path.exists(archivo):
@@ -27,20 +28,20 @@ def guardar_texto(archivo, contenido):
     with open(archivo, "w", encoding="utf-8") as f:
         f.write(contenido)
 
-def cargar_noticias():
-    if os.path.exists(ARCH_NOTICIAS):
+def cargar_json(archivo):
+    if os.path.exists(archivo):
         try:
-            with open(ARCH_NOTICIAS, "r", encoding="utf-8") as f:
+            with open(archivo, "r", encoding="utf-8") as f:
                 return json.load(f)
         except:
             return []
     return []
 
-def guardar_noticias(lista_noticias):
-    with open(ARCH_NOTICIAS, "w", encoding="utf-8") as f:
-        json.dump(lista_noticias, f, ensure_ascii=False, indent=4)
+def guardar_json(archivo, datos):
+    with open(archivo, "w", encoding="utf-8") as f:
+        json.dump(datos, f, ensure_ascii=False, indent=4)
 
-# Textos por defecto si los archivos no existen aún
+# Textos por defecto
 texto_marquesina_defecto = "¡Bienvenidos a La Voz Que Une! Periódico digital comunitario de la Población El Bosque 1, Huechuraba."
 texto_quienes_defecto = """### Nuestra Historia y Propósito
 
@@ -57,10 +58,11 @@ Nuestro equipo está conformado por vecinos, educadores, gestores culturales y c
 * **Fotografía y Registro Histórico:** Archivo comunitario y aportes de los lectores de Huechuraba.
 """
 
-# Cargar contenidos actuales desde los archivos
+# Carga inicial de datos
 marquesina_actual = cargar_texto(ARCH_MARQUESINA, texto_marquesina_defecto)
 quienes_actual = cargar_texto(ARCH_QUIENES, texto_quienes_defecto)
-noticias_actuales = cargar_noticias()
+noticias_actuales = cargar_json(ARCH_NOTICIAS)
+mensajes_recibidos = cargar_json(ARCH_MENSAJES)
 
 # -------------------------------------------------------------
 # BANNER PRINCIPAL
@@ -79,7 +81,7 @@ st.title("📰 La Voz Que Une")
 st.caption("Periódico digital comunitario de la Población El Bosque 1 - Huechuraba")
 
 # -------------------------------------------------------------
-# MARQUESINA / LETRAS DESPLAZABLES (LIMPIA DE SÍMBOLOS EXTRAÑOS)
+# MARQUESINA / LETRAS DESPLAZABLES
 # -------------------------------------------------------------
 texto_marquesina_limpio = marquesina_actual.replace("<", "").replace(">", "").strip()
 
@@ -106,7 +108,7 @@ opcion = st.sidebar.radio(
 )
 
 # -------------------------------------------------------------
-# SECCIÓN 1: INICIO (DESPLIEGUE DE NOTICIAS Y PUBLICACIONES)
+# SECCIÓN 1: INICIO (NOTICIAS PUBLICADAS)
 # -------------------------------------------------------------
 if opcion == "Inicio":
     st.header("Bienvenido a nuestro portal comunitario")
@@ -119,11 +121,12 @@ if opcion == "Inicio":
     st.subheader("📰 Publicaciones y Noticias Comunitarias")
 
     if noticias_actuales:
-        # Mostrar las noticias de más reciente a más antigua
         for idx, noti in enumerate(reversed(noticias_actuales)):
             st.markdown(f"### {noti['titulo']}")
-            st.caption(f"📅 *Publicado el {noti['fecha']}* | 🏷️ **Categoría:** {noti['categoria']}")
+            st.caption(f"📅 *Publicado el {noti['fecha']}* | 🏷️ **Categoría:** {noti.get('categoria', 'General')}")
             st.write(noti['contenido'])
+            if "imagen" in noti and noti["imagen"] and os.path.exists(noti["imagen"]):
+                st.image(noti["imagen"], use_container_width=True)
             st.divider()
     else:
         st.info("Aún no hay publicaciones guardadas. Puede agregar la primera desde el Panel de Administración.")
@@ -192,26 +195,70 @@ elif opcion == "Quiénes somos":
 # -------------------------------------------------------------
 elif opcion == "Administración":
     st.header("⚙️ Panel de Administración")
-    st.write("Gestión interna de contenidos, publicaciones y noticias.")
+    st.write("Gestión interna de contenidos, publicaciones y moderación de aportes.")
     
     st.divider()
     clave = st.text_input("Ingrese la clave de acceso:", type="password")
     
     if clave:
-        # Recuerde verificar si mantiene "lavoz123" o la clave personalizada que usted definió
         if clave == "Bosque2026":
             st.success("Acceso concedido al Panel de Administración.")
 
-            sub_tab1, sub_tab2, sub_tab3, sub_tab4 = st.tabs([
+            sub_tab1, sub_tab2, sub_tab3, sub_tab4, sub_tab5 = st.tabs([
+                "📬 Mensajes y Moderación",
                 "📝 Publicar Noticia", 
                 "👤 Editar Quiénes Somos", 
                 "📢 Modificar Marquesina",
                 "🖼️ Subir Fotos a Galería"
             ])
 
-            # PESTAÑA 1: PUBLICAR NUEVA NOTICIA
+            # PESTAÑA 1: MODERACIÓN DE MENSAJES RECIBIDOS
             with sub_tab1:
-                st.subheader("Publicar un nuevo artículo o noticia en la portada")
+                st.subheader("📬 Envíos y Aportes Recibidos de los Vecinos")
+                st.write("Revise los mensajes enviados desde la sección Contacto y decida si aprobarlos para la portada o descartarlos.")
+
+                if mensajes_recibidos:
+                    for i, msg in enumerate(mensajes_recibidos):
+                        with st.expander(f"📩 {msg.get('asunto', 'Sin asunto')} — Enviado por: {msg.get('nombre', 'Anónimo')} ({msg.get('fecha', '')})"):
+                            st.write(f"**Contacto:** {msg.get('contacto', 'No indicado')}")
+                            st.write(f"**Mensaje:** {msg.get('mensaje', '')}")
+                            
+                            ruta_img = msg.get("imagen")
+                            if ruta_img and os.path.exists(ruta_img):
+                                st.image(ruta_img, width=300, caption="Imagen adjunta por el vecino")
+
+                            col_btn1, col_btn2 = st.columns([1, 1])
+
+                            with col_btn1:
+                                if st.button(f"✅ Aprobar y Publicar Noticia #{i+1}", key=f"aprob_{i}"):
+                                    nueva_noticia = {
+                                        "titulo": f"{msg.get('asunto')} - {msg.get('nombre')}",
+                                        "categoria": "Aportes Vecinales",
+                                        "contenido": msg.get('mensaje'),
+                                        "fecha": msg.get('fecha'),
+                                        "imagen": msg.get('imagen')
+                                    }
+                                    noticias_actuales.append(nueva_noticia)
+                                    guardar_json(ARCH_NOTICIAS, noticias_actuales)
+                                    
+                                    # Se quita de la lista de pendientes
+                                    mensajes_recibidos.pop(i)
+                                    guardar_json(ARCH_MENSAJES, mensajes_recibidos)
+                                    st.success("¡Publicación aprobada y agregada a la sección Inicio!")
+                                    st.rerun()
+
+                            with col_btn2:
+                                if st.button(f"🗑️ Descartar Mensaje #{i+1}", key=f"desc_{i}"):
+                                    mensajes_recibidos.pop(i)
+                                    guardar_json(ARCH_MENSAJES, mensajes_recibidos)
+                                    st.warning("Mensaje descartado.")
+                                    st.rerun()
+                else:
+                    st.info("No hay mensajes pendientes de revisión en este momento.")
+
+            # PESTAÑA 2: PUBLICAR NUEVA NOTICIA
+            with sub_tab2:
+                st.subheader("Publicar un nuevo artículo o noticia directamente")
                 titulo_noticia = st.text_input("Título de la publicación:")
                 cat_noticia = st.selectbox(
                     "Sección / Categoría de la publicación:",
@@ -231,12 +278,12 @@ elif opcion == "Administración":
                             "fecha": fecha_hoy
                         }
                         noticias_actuales.append(nueva_pub)
-                        guardar_noticias(noticias_actuales)
+                        guardar_json(ARCH_NOTICIAS, noticias_actuales)
                         st.success("¡Noticia publicada con éxito! Ya se encuentra visible en la sección Inicio.")
                         st.rerun()
 
-            # PESTAÑA 2: EDITAR QUIÉNES SOMOS
-            with sub_tab2:
+            # PESTAÑA 3: EDITAR QUIÉNES SOMOS
+            with sub_tab3:
                 st.subheader("Editar la presentación de 'Quiénes somos'")
                 nuevo_quienes = st.text_area(
                     "Modifique la historia o presentación del equipo:",
@@ -248,23 +295,22 @@ elif opcion == "Administración":
                     st.success("¡Texto guardado permanentemente en el servidor!")
                     st.rerun()
 
-            # PESTAÑA 3: MODIFICAR MARQUESINA
-            with sub_tab3:
+            # PESTAÑA 4: MODIFICAR MARQUESINA
+            with sub_tab4:
                 st.subheader("Modificar mensaje de las letras desplazables")
                 nueva_marquesina = st.text_area(
-                    "Escriba el nuevo aviso informativo (se guardará sin caracteres extraños):",
+                    "Escriba el nuevo aviso informativo:",
                     value=marquesina_actual,
                     height=100
                 )
                 if st.button("💾 Guardar Marquesina Permanentemente"):
-                    # Limpiamos posibles símbolos extraños antes de guardar
                     texto_limpio_guardar = nueva_marquesina.replace("<", "").replace(">", "").strip()
                     guardar_texto(ARCH_MARQUESINA, texto_limpio_guardar)
-                    st.success("¡Marquesina actualizada y guardada de forma limpia!")
+                    st.success("¡Marquesina actualizada correctamente!")
                     st.rerun()
 
-            # PESTAÑA 4: SUBIR FOTOS A LA GALERÍA
-            with sub_tab4:
+            # PESTAÑA 5: SUBIR FOTOS A LA GALERÍA
+            with sub_tab5:
                 st.subheader("Subir imágenes directamente a la Galería")
                 if os.path.exists("galeria"):
                     cats_galeria = [c for c in os.listdir("galeria") if os.path.isdir(os.path.join("galeria", c))]
@@ -292,7 +338,7 @@ elif opcion == "Administración":
             st.error("Clave incorrecta. Intente nuevamente.")
 
 # -------------------------------------------------------------
-# SECCIÓN 5: CONTACTO
+# SECCIÓN 5: CONTACTO (ENVÍO Y REGISTRO DE MENSAJES)
 # -------------------------------------------------------------
 elif opcion == "Contacto":
     st.header("✉️ Contacto y Envío de Material")
@@ -324,10 +370,10 @@ elif opcion == "Contacto":
         if nombre.strip() == "" or contacto_vecino.strip() == "" or mensaje.strip() == "":
             st.error("Por favor, complete los campos obligatorios (Nombre, Contacto y Mensaje).")
         else:
-            carpeta_envios = "mensajes_recibidos"
-            os.makedirs(carpeta_envios, exist_ok=True)
-
+            ruta_imagen_guardada = None
             if archivos_adjuntos:
+                carpeta_envios = "mensajes_recibidos"
+                os.makedirs(carpeta_envios, exist_ok=True)
                 for archivo in archivos_adjuntos:
                     nombre_limpio = nombre.replace(" ", "_").lower()
                     fecha_str = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -336,5 +382,19 @@ elif opcion == "Contacto":
                     
                     with open(ruta_guardado, "wb") as f:
                         f.write(archivo.getbuffer())
+                    ruta_imagen_guardada = ruta_guardado
 
-            st.success(f"¡Muchas gracias {nombre}! Su mensaje y archivos han sido recibidos con éxito por el equipo de La Voz Que Une.")
+            # Guardar el mensaje en el registro de moderación
+            nuevo_mensaje = {
+                "nombre": nombre,
+                "contacto": contacto_vecino,
+                "asunto": asunto,
+                "mensaje": mensaje,
+                "fecha": datetime.now().strftime("%d/%m/%Y %H:%M"),
+                "imagen": ruta_imagen_guardada
+            }
+            
+            mensajes_recibidos.append(nuevo_mensaje)
+            guardar_json(ARCH_MENSAJES, mensajes_recibidos)
+
+            st.success(f"¡Muchas gracias {nombre}! Su mensaje ha sido recibido por el equipo editorial de La Voz Que Une.")
